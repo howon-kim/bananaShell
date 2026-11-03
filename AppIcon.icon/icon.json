@@ -1,0 +1,8 @@
+{
+  "fill": {"linear-gradient": ["display-p3:0.146,0.205,0.249,1.000","display-p3:0.045,0.073,0.113,1.000"]},
+  "groups": [{"layers": [
+    {"image-name":"Wordmark.svg","name":"banana"},
+    {"image-name":"Prompt.svg","name":"Shell prompt"}
+  ], "shadow":{"kind":"neutral","opacity":0.35}, "translucency":{"enabled":false,"value":0.5}}],
+  "supported-platforms":{"squares":"shared"}
+}

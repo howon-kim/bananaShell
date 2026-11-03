@@ -1,0 +1,35 @@
+name: bananaShell
+options:
+  deploymentTarget:
+    macOS: "13.0"
+packages:
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    revision: be5c0a8b2ce3692ffaad1c3460720dbc16a5bf1f
+targets:
+  bananaShell:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes: [Fonts, PromptSupport]
+      - path: Sources/PromptSupport
+        type: folder
+        buildPhase: resources
+      - path: Sources/Fonts
+        buildPhase: resources
+      - path: AppIcon.icon
+        type: file
+        buildPhase: resources
+    dependencies:
+      - package: SwiftTerm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.bananaShell
+        INFOPLIST_FILE: NotificationDefaults.plist
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_IDENTITY: "-"
+    scheme: {}

@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+.DS_Store
+.env
+.env.*
+.zsh_history*
+.zsh_sessions/
+.bash_history
