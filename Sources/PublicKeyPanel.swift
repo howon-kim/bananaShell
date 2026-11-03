@@ -478,15 +478,16 @@ struct PublicKeyPanel: View {
                         Text("Use + in the tab bar to generate or import a key.").foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    if !narrow || !showingDetail {
-                        TextField("Search by name, file, or fingerprint", text: $query).textFieldStyle(.roundedBorder)
-                    }
                     HStack(alignment: .top, spacing: 16) {
                         if !narrow || !showingDetail {
-                            ScrollView {
-                                VStack(spacing: 4) {
-                                    ForEach(matches) { key in sidebarRow(key) }
-                                    if matches.isEmpty { Text("No matching keys").foregroundStyle(.secondary) }
+                            VStack(alignment: .leading, spacing: 14) {
+                                TextField("Search by name, file, or fingerprint", text: $query)
+                                    .textFieldStyle(.roundedBorder)
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(matches) { key in sidebarRow(key) }
+                                        if matches.isEmpty { Text("No matching keys").foregroundStyle(.secondary) }
+                                    }
                                 }
                             }.frame(maxWidth: narrow ? .infinity : 260)
                         }
