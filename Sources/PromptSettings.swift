@@ -104,6 +104,7 @@ enum PromptSetup {
 
 struct PromptSettings: View {
     let didChange: () -> Void
+    @AppStorage("restoreLastWindow") private var restoreLastWindow = false
     @AppStorage("powerline") private var enabled = false
     @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
     @AppStorage("promptIdentity") private var identity = true
@@ -148,6 +149,7 @@ struct PromptSettings: View {
                                 preview
                                 libraryPicker
                                 preferences
+                                startup
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(width: inspectorWidth)
                         ScrollView {
@@ -163,6 +165,7 @@ struct PromptSettings: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         header
+                        startup
                         preview
                         if enabled {
                             libraryPicker
@@ -192,11 +195,24 @@ struct PromptSettings: View {
                        customAccent, poshFile, starshipFile, String(followBackground)]) { _ in didChange() }
     }
 
+    private var startup: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Startup")
+            preferenceRow("Reopen last window on launch",
+                          detail: "Restore window size, tabs, and folders with fresh shells.",
+                          value: $restoreLastWindow)
+                .settingsSurface(accent: accent)
+        }
+        .onChange(of: restoreLastWindow) { enabled in
+            if !enabled { UserDefaults.standard.removeObject(forKey: "lastWindowSnapshot") }
+        }
+    }
+
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Settings").font(.title.bold())
-                Text("Appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
+                Text("Startup, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
             Toggle("Custom prompt", isOn: $enabled)

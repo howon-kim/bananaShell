@@ -2,6 +2,14 @@ ZDOTDIR=$_banana_user_dotdir
 if [[ -r "$ZDOTDIR/.zlogin" ]]; then source "$ZDOTDIR/.zlogin"; fi
 _banana_state=$BANANA_THEME_STATE
 _banana_fifo=$BANANA_THEME_FIFO
+if [[ -n $BANANA_LIMITS_BASE && -x /usr/bin/jq ]] && (( ! $+functions[claude] && ! $+aliases[claude] )); then
+  _banana_claude_launcher=$BANANA_STARTUP_DIR/claude-launch.sh
+  function claude {
+    local binary=${commands[claude]}
+    if [[ ! -x $binary ]]; then command claude "$@"; return $?; fi
+    /bin/sh "$_banana_claude_launcher" "$binary" "$@"
+  }
+fi
 unset _banana_user_dotdir BANANA_STARTUP_DIR BANANA_THEME_STATE BANANA_THEME_FIFO
 _banana_original=$PROMPT
 _banana_original_right=$RPROMPT

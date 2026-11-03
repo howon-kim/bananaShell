@@ -10,14 +10,18 @@
 		0AE0843D85AC9841316E08C0 /* Automations.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE664BF9F18F9852BBE4D10 /* Automations.swift */; };
 		0E73186253C549F6DD219C50 /* JetBrainsMonoNLNerdFontMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BE5C50900D630551A77B7FD5 /* JetBrainsMonoNLNerdFontMono-Regular.ttf */; };
 		220A6D859F5F1E3017AB4716 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 983AB667F0631675E6D10BD9 /* SwiftTerm */; };
+		3A274169535C297B77D2F919 /* ActivityPaneSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */; };
 		3A813B2A6C185EA49D9F7F52 /* PublicKeyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */; };
 		43E62FC64A1A74E7E89C68AB /* Sidebars.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8ED11AD06251BB51237C85 /* Sidebars.swift */; };
+		4BF56B719F4784C5C34E1642 /* ForegroundProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */; };
 		7C9EC9D927E777A1F350E895 /* PromptSupport in Resources */ = {isa = PBXBuildFile; fileRef = 16A7FB76B928F481D7FA7F29 /* PromptSupport */; };
 		81D00AF45D55EF0F79BA2B78 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821C9B4585A30278DCBF7F39 /* Recording.swift */; };
 		A5583199B15F9BFF8446FC29 /* SUITE-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = ADF7FCDB634B1DFBCCAC45F4 /* SUITE-Bold.otf */; };
 		A9B2E723B4A6B29819DAD5D1 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455628FE21F4768C4459036D /* main.swift */; };
 		AEC6C164DD8142CD6E0DC4D9 /* TabTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FCE98FE2F3CC84A404A932C /* TabTypography.swift */; };
+		B1E170904920609D2CAFD836 /* TerminalSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C96696E973D980EC2CA93DE /* TerminalSlots.swift */; };
 		B3E98AABB868491E61E16BC8 /* PromptSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38F64639269C038AD14090E7 /* PromptSettings.swift */; };
+		BF6815554533E16533250FEF /* ProgramLogos in Resources */ = {isa = PBXBuildFile; fileRef = 20A5C9ABB7B2A8700D91E607 /* ProgramLogos */; };
 		CC8A45CEF8964924606516F2 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7C492121D2D16F4A756AD521 /* AppIcon.icon */; };
 		E294D9698C3F46AAED549821 /* SUITE-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 5E171DAEB85D41EB5A23CEBA /* SUITE-LICENSE.txt */; };
 		E3F4C48A77D6BDDC2CAAF660 /* JetBrainsMono-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = E72F68D9931DF67039DF2E5B /* JetBrainsMono-OFL.txt */; };
@@ -26,13 +30,17 @@
 
 /* Begin PBXFileReference section */
 		16A7FB76B928F481D7FA7F29 /* PromptSupport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PromptSupport; path = Sources/PromptSupport; sourceTree = SOURCE_ROOT; };
+		20A5C9ABB7B2A8700D91E607 /* ProgramLogos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ProgramLogos; path = Sources/ProgramLogos; sourceTree = SOURCE_ROOT; };
 		38F64639269C038AD14090E7 /* PromptSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptSettings.swift; sourceTree = "<group>"; };
 		455628FE21F4768C4459036D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		4FCE98FE2F3CC84A404A932C /* TabTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabTypography.swift; sourceTree = "<group>"; };
 		5E171DAEB85D41EB5A23CEBA /* SUITE-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SUITE-LICENSE.txt"; sourceTree = "<group>"; };
+		6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundProgram.swift; sourceTree = "<group>"; };
 		729977006F3C423FAE99BD73 /* NerdFonts-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NerdFonts-LICENSE.txt"; sourceTree = "<group>"; };
 		7C492121D2D16F4A756AD521 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		7C96696E973D980EC2CA93DE /* TerminalSlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSlots.swift; sourceTree = "<group>"; };
 		821C9B4585A30278DCBF7F39 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
+		87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityPaneSize.swift; sourceTree = "<group>"; };
 		978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyPanel.swift; sourceTree = "<group>"; };
 		ADF7FCDB634B1DFBCCAC45F4 /* SUITE-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SUITE-Bold.otf"; sourceTree = "<group>"; };
 		AE8ED11AD06251BB51237C85 /* Sidebars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebars.swift; sourceTree = "<group>"; };
@@ -57,13 +65,16 @@
 		23F066EBF3288049DFED9592 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */,
 				ECE664BF9F18F9852BBE4D10 /* Automations.swift */,
+				6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */,
 				455628FE21F4768C4459036D /* main.swift */,
 				38F64639269C038AD14090E7 /* PromptSettings.swift */,
 				978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */,
 				821C9B4585A30278DCBF7F39 /* Recording.swift */,
 				AE8ED11AD06251BB51237C85 /* Sidebars.swift */,
 				4FCE98FE2F3CC84A404A932C /* TabTypography.swift */,
+				7C96696E973D980EC2CA93DE /* TerminalSlots.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -72,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				7C492121D2D16F4A756AD521 /* AppIcon.icon */,
+				20A5C9ABB7B2A8700D91E607 /* ProgramLogos */,
 				16A7FB76B928F481D7FA7F29 /* PromptSupport */,
 				685B2E92EB7B84A2904B5097 /* Fonts */,
 				23F066EBF3288049DFED9592 /* Sources */,
@@ -165,6 +177,7 @@
 				E3F4C48A77D6BDDC2CAAF660 /* JetBrainsMono-OFL.txt in Resources */,
 				0E73186253C549F6DD219C50 /* JetBrainsMonoNLNerdFontMono-Regular.ttf in Resources */,
 				F3C47303F7D357D34E2E3C8E /* NerdFonts-LICENSE.txt in Resources */,
+				BF6815554533E16533250FEF /* ProgramLogos in Resources */,
 				7C9EC9D927E777A1F350E895 /* PromptSupport in Resources */,
 				A5583199B15F9BFF8446FC29 /* SUITE-Bold.otf in Resources */,
 				E294D9698C3F46AAED549821 /* SUITE-LICENSE.txt in Resources */,
@@ -178,12 +191,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A274169535C297B77D2F919 /* ActivityPaneSize.swift in Sources */,
 				0AE0843D85AC9841316E08C0 /* Automations.swift in Sources */,
+				4BF56B719F4784C5C34E1642 /* ForegroundProgram.swift in Sources */,
 				B3E98AABB868491E61E16BC8 /* PromptSettings.swift in Sources */,
 				3A813B2A6C185EA49D9F7F52 /* PublicKeyPanel.swift in Sources */,
 				81D00AF45D55EF0F79BA2B78 /* Recording.swift in Sources */,
 				43E62FC64A1A74E7E89C68AB /* Sidebars.swift in Sources */,
 				AEC6C164DD8142CD6E0DC4D9 /* TabTypography.swift in Sources */,
+				B1E170904920609D2CAFD836 /* TerminalSlots.swift in Sources */,
 				A9B2E723B4A6B29819DAD5D1 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

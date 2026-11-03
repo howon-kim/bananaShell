@@ -12,7 +12,10 @@ targets:
     platform: macOS
     sources:
       - path: Sources
-        excludes: [Fonts, PromptSupport]
+        excludes: [Fonts, PromptSupport, ProgramLogos]
+      - path: Sources/ProgramLogos
+        type: folder
+        buildPhase: resources
       - path: Sources/PromptSupport
         type: folder
         buildPhase: resources
