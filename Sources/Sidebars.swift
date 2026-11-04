@@ -460,7 +460,7 @@ private struct TerminalTabStrip: View {
                 HStack(spacing: 6) {
                     Capsule().fill(active ? sessionAccent : Color.secondary.opacity(0.55))
                         .frame(width: 3, height: active ? 14 : 8)
-                    Text("Page \(page + 1)").font(.system(size: 11, weight: .semibold)).monospacedDigit()
+                    Text("Page \(page + 1)").font(TabTypography.favoriteLabel).monospacedDigit()
                     if let shortcut = GridTabKind.page.shortcut(at: page) {
                         Text(verbatim: shortcut).font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundStyle(.secondary)
