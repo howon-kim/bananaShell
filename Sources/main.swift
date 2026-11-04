@@ -38,6 +38,8 @@ enum ShellTabShortcuts {
 
 private final class ShellWindow: NSWindow {
     var selectTabAtIndex: ((Int) -> Void)?
+    var navigateGridTabs: ((GridTabKind, GridTabTarget) -> Bool)?
+    var canBrowsePages: (() -> Bool)?
     var deactivateActivityTerminal: (() -> Bool)?
     var responderChanged: ((NSResponder?) -> Void)?
 
@@ -55,21 +57,93 @@ private final class ShellWindow: NSWindow {
 
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, event.keyCode == UInt16(kVK_Escape),
-           event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty,
-           attachedSheet == nil, deactivateActivityTerminal?() == true { return }
+        // Option and Control key presses can go straight to the first responder
+        // without AppKit looking for a menu key equivalent.
+        if handleGridShortcut(event) { return }
+        if event.type == .keyDown, attachedSheet == nil,
+           event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty {
+            if event.keyCode == UInt16(kVK_Escape), deactivateActivityTerminal?() == true { return }
+            if isKeyWindow, let step = bracketStep(event), canBrowsePages?() == true,
+               navigateGridTabs?(.page, .step(step)) == true { return }
+        }
         super.sendEvent(event)
     }
 
 
+    private func bracketStep(_ event: NSEvent) -> Int? {
+        switch event.keyCode {
+        case UInt16(kVK_ANSI_LeftBracket): return -1
+        case UInt16(kVK_ANSI_RightBracket): return 1
+        default: return nil
+        }
+    }
+
+    private func handleGridShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown, isKeyWindow, attachedSheet == nil else { return false }
+        let kind: GridTabKind
+        switch event.modifierFlags.intersection([.command, .shift, .option, .control]) {
+        case .control: kind = .group
+        case .option: kind = .page
+        default: return false
+        }
+        let target: GridTabTarget
+        if let step = bracketStep(event) { target = .step(step) }
+        else if let index = ShellTabShortcuts.keyCodes.prefix(10).firstIndex(of: event.keyCode) { target = .index(index) }
+        else { return false }
+        return navigateGridTabs?(kind, target) == true
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
-        if event.type == .keyDown, isKeyWindow, attachedSheet == nil, modifiers == .command,
-           let index = ShellTabShortcuts.keyCodes.firstIndex(of: event.keyCode), let selectTabAtIndex {
-            selectTabAtIndex(index)
-            return true
+        if event.type == .keyDown, isKeyWindow, attachedSheet == nil {
+            let index = ShellTabShortcuts.keyCodes.firstIndex(of: event.keyCode)
+            if modifiers == .command, let index, let selectTabAtIndex {
+                selectTabAtIndex(index)
+                return true
+            }
+            if handleGridShortcut(event) { return true }
         }
         return super.performKeyEquivalent(with: event)
+    }
+}
+
+private final class WorkspaceContentView: NSView {
+    static let terminalInset: CGFloat = 10
+    static let terminalTopInset: CGFloat = 12
+    private var contentInset: CGFloat = 0
+
+    // Ignore transient empty bounds until the window has a real layout.
+    func contentFrame(inset: CGFloat) -> CGRect? {
+        // AppKit coordinates grow upward, so subtract the top margin from
+        // the height while keeping utility panels flush with their container.
+        let topInset = inset > 0 ? Self.terminalTopInset : 0
+        let rect = CGRect(x: bounds.minX + inset, y: bounds.minY + inset,
+                          width: bounds.size.width - 2 * inset, height: bounds.size.height - inset - topInset)
+        guard rect.size.width > 0, rect.size.height > 0, !rect.isInfinite, rect.origin.x.isFinite, rect.origin.y.isFinite,
+              rect.width.isFinite, rect.height.isFinite else { return nil }
+        return rect
+    }
+
+    func show(_ view: NSView, inset: CGFloat) {
+        contentInset = inset
+        if subviews.first !== view {
+            subviews.first?.removeFromSuperview()
+            view.removeFromSuperview()
+            view.autoresizingMask = []
+            addSubview(view)
+        }
+        fitContent()
+    }
+
+    override func layout() {
+        super.layout()
+        fitContent()
+    }
+
+    private func fitContent() {
+        guard let view = subviews.first, let rect = contentFrame(inset: contentInset),
+              view.frame != rect else { return }
+        view.frame = rect
     }
 }
 
@@ -85,17 +159,22 @@ private final class Session {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, LocalProcessTerminalViewDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, NSToolbarDelegate, LocalProcessTerminalViewDelegate {
     private var sessions: [Session] = []
     private let workspace = WorkspaceState()
-    private let body = NSView()
-    private let directoryLabel = NSTextField(labelWithString: "")
+    private let body = WorkspaceContentView()
+    private var tabBarHeight: NSLayoutConstraint!
+    private let navigationItem = NSToolbarItem.Identifier("bananaShell.navigation")
     private var window: ShellWindow!
     private lazy var keys = NSHostingView(rootView: PublicKeyPanel(generateRequest: workspace.generateKey, importRequest: workspace.importKey))
     private lazy var automations = NSHostingView(rootView: AutomationPanel(addRequest: workspace.addAutomation))
-    private lazy var activity = NSHostingView(rootView: ActivityPanel(state: workspace, terminalView: { [weak self] id in
+    private lazy var activity: NSHostingView<ActivityPanel> = NSHostingView(rootView: ActivityPanel(state: workspace, terminalView: { [weak self] id in
         self?.sessions.first(where: { $0.id == id })?.view
-    }, close: { [weak self] in self?.removeShell($0) }))
+    }, close: { [weak self] in self?.removeShell($0) }, create: { [weak self] in self?.createTerminalTab(selecting: false) },
+       releaseFocus: { [weak self] in self?.releaseActivityFocus() },
+       expand: { [weak self] id in self?.select(.shell(id)) }))
+    private func releaseActivityFocus() { window.makeFirstResponder(activity) }
+
     private let themeDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("banana-theme-" + UUID().uuidString)
     private var serial = 0
     private var lastShell: Int?
@@ -105,8 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let frame: String
         let directories: [String]
         let shortcutSlots: [Int]?
-        let activityPaneSizes: [ActivityPaneSize?]?
-        let activityExpanded: [Bool]?
+        let activityBoards: ActivityBoards?
         let activityFocusedSlot: Int?
         let lastShellIndex: Int
         let panel: String?
@@ -135,8 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             return session.directory
         }
         let state = WindowSnapshot(frame: NSStringFromRect(window.frame), directories: directories,
-                                   shortcutSlots: sessions.map(\.shortcutSlot), activityPaneSizes: sessions.map { workspace.activityPaneSizes[$0.id] },
-                                   activityExpanded: sessions.map { workspace.expandedActivityTerminals.contains($0.id) },
+                                   shortcutSlots: sessions.map(\.shortcutSlot), activityBoards: workspace.activityBoards,
                                    activityFocusedSlot: sessions.first { $0.id == workspace.activityTerminal }?.shortcutSlot, lastShellIndex: sessions.firstIndex { $0.id == lastShell } ?? 0, panel: panel)
         if let data = try? JSONEncoder().encode(state) { UserDefaults.standard.set(data, forKey: "lastWindowSnapshot") }
     }
@@ -166,40 +243,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let valid = FileManager.default.fileExists(atPath: path, isDirectory: &directory) && directory.boolValue && FileManager.default.isExecutableFile(atPath: path)
             createTerminalTab(selecting: false, directory: valid ? path : FileManager.default.homeDirectoryForCurrentUser.path,
                               restoredSlot: state.shortcutSlots.flatMap { $0.indices.contains(index) ? $0[index] : nil })
-            if let sizes = state.activityPaneSizes, sizes.indices.contains(index),
-               let size = sizes[index], let id = sessions.last?.id {
-                workspace.activityPaneSizes[id] = size
-            }
         }
-        for (index, session) in sessions.enumerated() {
-            if let expanded = state.activityExpanded, expanded.indices.contains(index), expanded[index] {
-                workspace.expandedActivityTerminals.insert(session.id)
-            }
-            if session.shortcutSlot == state.activityFocusedSlot,
-               workspace.expandedActivityTerminals.contains(session.id) { workspace.activityTerminal = session.id }
+        var boards = state.activityBoards ?? ActivityBoards()
+        boards.reconcile(with: sessions.map(\.shortcutSlot))
+        workspace.activityBoards = boards
+        if let slot = state.activityFocusedSlot, boards.current.visibleSlots.contains(slot) {
+            workspace.activityTerminal = sessions.first { $0.shortcutSlot == slot }?.id
         }
-        select(.shell(sessions[sessions.indices.contains(state.lastShellIndex) ? state.lastShellIndex : 0].id))
-        if let panel = state.panel, let tab = ["keys": WorkspaceTab.keys, "activity": .activity, "settings": .settings, "automations": .automations][panel] { select(tab) }
+        lastShell = sessions[sessions.indices.contains(state.lastShellIndex) ? state.lastShellIndex : 0].id
+        if let panel = state.panel, let tab = ["keys": WorkspaceTab.keys, "activity": .activity, "settings": .settings, "automations": .automations][panel] {
+            select(tab)
+        } else if let lastShell { select(.shell(lastShell)) }
     }
 
     private let confirmations = AutomationNotifications()
     private var timer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        window = ShellWindow(contentRect: NSRect(x: 0, y: 0, width: 1140, height: 560),
+        // Leave desktop space around a new window; restored windows keep their saved frame.
+        let visibleWidth = NSScreen.main?.visibleFrame.width ?? 0
+        let width: CGFloat = visibleWidth > 0 ? min(1600, floor(visibleWidth * 0.90)) : 1140
+        let initialRect = NSRect(x: 0, y: 0, width: width, height: 560)
+        window = ShellWindow(contentRect: initialRect,
                           styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.delegate = self
         window.selectTabAtIndex = { [weak self] in self?.selectShellTab(at: $0) }
+        window.navigateGridTabs = { [weak self] kind, target in
+            guard let self, self.workspace.navigate(kind, to: target) else { return false }
+            self.select(.activity)
+            return true
+        }
+        window.canBrowsePages = { [weak self] in
+            guard let self, self.workspace.selected == .activity, self.workspace.activityTerminal == nil,
+                  !(self.window.firstResponder is NSText) else { return false }
+            // A mouse click can focus a terminal before its published selection updates.
+            guard let responder = self.window.firstResponder as? NSView else { return true }
+            return !self.sessions.contains { responder === $0.view || responder.isDescendant(of: $0.view) }
+        }
         window.deactivateActivityTerminal = { [weak self] in
             guard let self, self.workspace.selected == .activity, self.workspace.activityTerminal != nil else { return false }
-            if let id = self.workspace.activityTerminal { self.workspace.collapseActivityTerminal(id) }
+            self.workspace.activityTerminal = nil
             self.window.makeFirstResponder(self.activity)
             return true
         }
         window.responderChanged = { [weak self] responder in
             guard let self, self.workspace.selected == .activity, let view = responder as? NSView,
                   let session = self.sessions.first(where: { view === $0.view || view.isDescendant(of: $0.view) }),
-                  self.workspace.expandedActivityTerminals.contains(session.id) else { return }
+                  self.workspace.activityBoards.current.visibleSlots.contains(session.shortcutSlot) else { return }
             if self.workspace.activityTerminal != session.id { self.workspace.activityTerminal = session.id }
         }
         window.tabbingMode = .disallowed
@@ -208,40 +298,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         window.title = "bananaShell"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        let titleLabel = NSTextField(labelWithString: window.title)
-        titleLabel.font = terminalFont(size: NSFont.systemFontSize)
-        directoryLabel.textColor = .secondaryLabelColor
-        directoryLabel.lineBreakMode = .byTruncatingMiddle
-        directoryLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let titleRow = NSStackView(views: [titleLabel, directoryLabel])
-        titleRow.spacing = 8
-        titleRow.alignment = .centerY
+        window.toolbarStyle = .unifiedCompact
+        let toolbar = NSToolbar(identifier: "bananaShell.titlebar")
+        toolbar.delegate = self
+        toolbar.displayMode = .iconOnly
+        window.toolbar = toolbar
         window.contentMinSize = NSSize(width: 440, height: 200)
-        let bar = NSHostingView(rootView: FavoriteTabs(state: workspace, select: { [weak self] in self?.select($0) },
+        let bar = NSHostingView(rootView: TerminalToolbar(state: workspace, select: { [weak self] in self?.select($0) },
             create: { [weak self] in
                 guard let self else { return }
                 self.createTerminalTab(selecting: self.workspace.selected != .activity)
             }, close: { [weak self] in self?.removeShell($0) },
             move: { [weak self] in self?.moveShell($0, to: $1) }))
-        let root = NSView()
+        let root = NSView(frame: window.contentView?.bounds ?? initialRect)
+        // AppKit owns this frame. An empty bar otherwise publishes a maximum
+        // width of zero and collapses the window when a utility tab hides it.
+        bar.sizingOptions = []
         window.contentView = root
         let contentGuide = window.contentLayoutGuide as! NSLayoutGuide
-        root.addSubview(titleRow)
-        titleRow.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-        NSLayoutConstraint.activate([
-            titleRow.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 86),
-            titleRow.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -44),
-            titleRow.topAnchor.constraint(equalTo: root.topAnchor),
-            titleRow.bottomAnchor.constraint(equalTo: contentGuide.topAnchor)
-        ])
         for view in [bar as NSView, body] {
             root.addSubview(view)
             view.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([view.leadingAnchor.constraint(equalTo: root.leadingAnchor),
                                          view.trailingAnchor.constraint(equalTo: root.trailingAnchor)])
         }
-        NSLayoutConstraint.activate([bar.topAnchor.constraint(equalTo: contentGuide.topAnchor), bar.heightAnchor.constraint(equalToConstant: 42),
+        tabBarHeight = bar.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([bar.topAnchor.constraint(equalTo: contentGuide.topAnchor), tabBarHeight,
                                      body.topAnchor.constraint(equalTo: bar.bottomAnchor), body.bottomAnchor.constraint(equalTo: root.bottomAnchor)])
         confirmations.start()
         window.center()
@@ -249,6 +331,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if !backgroundLaunch { openWorkspace(); window.makeKeyAndOrderFront(nil) }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refresh(); self?.confirmations.poll() } }
         if !backgroundLaunch { NSApp.activate(ignoringOtherApps: true) }
+    }
+
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [navigationItem] }
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [navigationItem] }
+
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier,
+                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        guard identifier == navigationItem else { return nil }
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        item.label = "Workspace tabs"
+        let host = NSHostingView(rootView: FavoriteTabs(state: workspace, select: { [weak self] in self?.select($0) }))
+        host.sizingOptions = []
+        host.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
+        host.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        item.view = host
+        item.autovalidates = false
+        if #available(macOS 26, *) { item.isBordered = false; item.isNavigational = true }
+        return item
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
@@ -281,13 +381,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
     func applicationWillTerminate(_ notification: Notification) { saveWindow(); try? FileManager.default.removeItem(at: themeDirectory) }
 
-    @objc func newTab(_ sender: Any?) { createTerminalTab(selecting: true) }
+    @objc func newTab(_ sender: Any?) { createTerminalTab(selecting: workspace.selected != .activity) }
 
     private func createTerminalTab(selecting: Bool, directory: String? = nil, restoredSlot: Int? = nil) {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         window.contentView?.layoutSubtreeIfNeeded()
         let initialDirectory = directory ?? FileManager.default.homeDirectoryForCurrentUser.path
-        let terminal = LocalProcessTerminalView(frame: body.bounds.insetBy(dx: 10, dy: 10))
+        let initialFrame: CGRect
+        if workspace.selected == .activity, body.bounds.width > 0, body.bounds.height > 0 {
+            let layout = ActivityTileLayout(viewport: body.bounds.size, grid: workspace.activityBoards.current.grid)
+            initialFrame = CGRect(origin: .zero, size: layout.terminalSize)
+        } else {
+            initialFrame = body.contentFrame(inset: WorkspaceContentView.terminalInset) ?? .zero
+        }
+        let terminal = LocalProcessTerminalView(frame: initialFrame)
         terminal.font = terminalFont(size: 14)
         terminal.lineSpacing = 1.15
         terminal.nativeBackgroundColor = PromptSetup.background(forShell: shell)
@@ -298,6 +405,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         session.directory = initialDirectory
         let insertion = restoredSlot == nil ? sessions.firstIndex(where: { $0.shortcutSlot > slot }) ?? sessions.count : sessions.count
         sessions.insert(session, at: insertion)
+        workspace.activityBoards.insert(slot)
+        if workspace.selected == .activity { workspace.activityTerminal = serial }
         terminal.processDelegate = self
         if selecting { select(.shell(serial)) }
         var environment: [String]?
@@ -319,7 +428,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func select(_ tab: WorkspaceTab) {
         let view: NSView
         var inset: CGFloat = 0
-        directoryLabel.stringValue = ""
+        workspace.titleDirectory = ""
         switch tab {
         case .settings: view = settings
         case .keys: view = keys
@@ -327,21 +436,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         case .automations: view = automations
         case .shell(let id):
             guard let session = sessions.first(where: { $0.id == id }) else { return }
+            workspace.activityBoards.reveal(session.shortcutSlot)
             lastShell = id
             view = session.view
-            inset = 10
-            if session.hasReportedDirectory { directoryLabel.stringValue = session.directory }
+            inset = WorkspaceContentView.terminalInset
+            if session.hasReportedDirectory { workspace.titleDirectory = session.directory }
         }
         workspace.tabColor = (view as? LocalProcessTerminalView)?.nativeBackgroundColor ?? workspace.tabColor
         window.backgroundColor = workspace.tabColor
+        tabBarHeight.constant = tab.showsTerminals ? 36 : 0
         workspace.selected = tab
         if tab == .activity { refresh() }
-        if body.subviews.first !== view {
-            body.subviews.first?.removeFromSuperview()
-            view.frame = body.bounds.insetBy(dx: inset, dy: inset)
-            view.autoresizingMask = [.width, .height]
-            body.addSubview(view)
-        }
+        window.contentView?.layoutSubtreeIfNeeded()
+        body.show(view, inset: inset)
         window.makeFirstResponder(view)
     }
 
@@ -349,9 +456,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
         if sessions.count == 1 { saveWindow() }
         let session = sessions.remove(at: index)
-        workspace.activityPaneSizes.removeValue(forKey: id)
+        workspace.activityBoards.remove(session.shortcutSlot)
         let wasActive = workspace.activityTerminal == id
-        workspace.collapseActivityTerminal(id)
+        if wasActive { workspace.activityTerminal = nil }
         if wasActive && workspace.selected == .activity { window.makeFirstResponder(activity) }
         try? FileManager.default.removeItem(at: themeDirectory.appendingPathComponent(String(id)))
         session.view.processDelegate = nil
@@ -360,7 +467,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if sessions.isEmpty { window.close(); return }
         let neighbor = sessions[min(index, sessions.count - 1)].id
         if lastShell == id { lastShell = neighbor }
-        if workspace.selected == .shell(id) { select(.shell(neighbor)) }
+        if workspace.selected == .shell(id) {
+            if let slot = workspace.activityBoards.current.visibleSlots.first,
+               let next = sessions.first(where: { $0.shortcutSlot == slot }) { select(.shell(next.id)) }
+            else { select(.activity) }
+        }
         refresh()
     }
 
@@ -370,11 +481,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func moveShell(_ sourceID: Int, to targetID: Int) {
-        guard let source = sessions.firstIndex(where: { $0.id == sourceID }),
-              let target = sessions.firstIndex(where: { $0.id == targetID }), source != target else { return }
-        let session = sessions.remove(at: source)
-        sessions.insert(session, at: target)
-        refresh()
+        guard let source = sessions.first(where: { $0.id == sourceID }), let target = sessions.first(where: { $0.id == targetID }) else { return }
+        workspace.activityBoards.reorder(source.shortcutSlot, to: target.shortcutSlot)
+        if let focused = workspace.tabs.first(where: { $0.id == workspace.activityTerminal }), workspace.selected == .activity {
+            workspace.activityBoards.reveal(focused.shortcutSlot)
+        }
     }
 
     @objc func selectTab(_ sender: NSMenuItem) {
@@ -396,9 +507,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func cycle(_ step: Int) {
-        let tabs: [WorkspaceTab] = [.keys, .activity, .automations] + sessions.map { .shell($0.id) } + [.settings]
-        let i = tabs.firstIndex(of: workspace.selected) ?? 0
-        select(tabs[(i + step + tabs.count) % tabs.count])
+        if case .shell = workspace.selected {
+            let tabs: [WorkspaceTab] = workspace.activityBoards.current.slots.compactMap { slot in
+                sessions.first { $0.shortcutSlot == slot }.map { .shell($0.id) }
+            }
+            if let i = tabs.firstIndex(of: workspace.selected) { select(tabs[(i + step + tabs.count) % tabs.count]) }
+            return
+        }
+        // A nil board ID denotes a utility tab; each grid has its own stop.
+        let tabs: [(WorkspaceTab, Int?)] = [(.keys, nil), (.automations, nil)] +
+            workspace.activityBoards.boards.map { (.activity, $0.id) } + [(.settings, nil)]
+        let i = tabs.firstIndex { $0.0 == workspace.selected && ($0.1 == nil || $0.1 == workspace.activityBoards.selected) } ?? 0
+        let next = tabs[(i + step + tabs.count) % tabs.count]
+        if let id = next.1 { workspace.activityTerminal = nil; workspace.activityBoards.select(id) }
+        select(next.0)
     }
     @objc func nextTab(_ sender: Any?) { cycle(1) }
     @objc func previousTab(_ sender: Any?) { cycle(-1) }
@@ -418,11 +540,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let status = busy ? (name ?? "Foreground task") + " running" : (group > 0 ? "Shell active" : "Checking status")
             let icon = busy ? ForegroundProgram.icon(pid: group, name: name, title: session.title) : nil
             let limits = icon == "claude" ? ClaudeLimits.rows(at: themeDirectory.appendingPathComponent("limits-\(session.id)-\(group)")) : []
-            let preview = workspace.selected == .activity
-                ? ActivityPreviewText.tail(session.view.visibleRowsText(0..<session.view.terminalDimensions.rows)) : ""
             return TabActivity(id: session.id, shortcutSlot: session.shortcutSlot, programIcon: icon, name: session.title, status: status,
                                directory: (session.hasReportedDirectory ? "" : "Started in: ") + (session.directory as NSString).abbreviatingWithTildeInPath,
-                               busy: busy, limits: limits, preview: preview)
+                               busy: busy, limits: limits)
         }
         if workspace.tabs != rows { workspace.tabs = rows }
     }
@@ -434,7 +554,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         guard let directory, !directory.isEmpty, let session = sessions.first(where: { $0.view === source }) else { return }
         session.directory = URL(string: directory)?.path ?? directory
         session.hasReportedDirectory = true
-        if workspace.selected == .shell(session.id) { directoryLabel.stringValue = session.directory }
+        if workspace.selected == .shell(session.id) { workspace.titleDirectory = session.directory }
     }
     func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {
         // SwiftTerm already updated the PTY. Only theme changes should trigger a prompt refresh.

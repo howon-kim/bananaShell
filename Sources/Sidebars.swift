@@ -27,8 +27,8 @@ enum ClaudeLimits {
             let label = String(row[..<separator.lowerBound])
             let period = label == "5-hour" ? "5h" : label == "Weekly" ? "7d" : label
             let detail = row[separator.upperBound...]
-            let usage = detail.components(separatedBy: " · ").first { $0.hasSuffix("% used") }
-            return period + " " + (usage.map { String($0.dropLast(5)) } ?? "—")
+            let remaining = detail.components(separatedBy: " · ").first { $0.hasSuffix("% left") }
+            return period + " " + (remaining ?? "—")
         }.joined(separator: " · ")
     }
 
@@ -55,7 +55,7 @@ enum ClaudeLimits {
                 }
             }
             if let used = number("used_percentage"), (0...100).contains(used) {
-                parts.insert(used.formatted(.number.precision(.fractionLength(0...1))) + "% used", at: 0)
+                parts.insert((100 - used).formatted(.number.precision(.fractionLength(0...1))) + "% left", at: 0)
             }
             return parts.isEmpty ? nil : label + ": " + parts.joined(separator: " · ")
         }
@@ -88,42 +88,78 @@ struct TabActivity: Identifiable, Equatable {
     }
     let busy: Bool
     let limits: [String]
-    var preview = ""
+}
+
+enum GridTabKind {
+    case group, page
+
+    var shortcutPrefix: String { self == .group ? "⌃" : "⌥" }
+
+    func shortcut(at index: Int) -> String? {
+        (0..<10).contains(index) ? shortcutPrefix + String((index + 1) % 10) : nil
+    }
+
+    func hint(at index: Int) -> String {
+        shortcut(at: index).map { " (" + $0 + ")" } ?? ""
+    }
+}
+
+private struct TabShortcutLabel: View {
+    let keys: String
+    var body: some View {
+        Text(verbatim: keys).font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(.secondary).fixedSize()
+    }
+}
+
+enum GridTabTarget {
+    case index(Int), step(Int)
 }
 
 final class WorkspaceState: ObservableObject {
+    @Published var titleDirectory = ""
     @Published var tabColor = shellSurface
     let addAutomation = PassthroughSubject<Void, Never>()
     let generateKey = PassthroughSubject<Void, Never>()
     let importKey = PassthroughSubject<Void, Never>()
     let focusActivityTerminal = PassthroughSubject<Int, Never>()
-    @Published var activityPaneSizes: [Int: ActivityPaneSize] = [:]
-    @Published var expandedActivityTerminals: Set<Int> = []
+    @Published var activityBoards = ActivityBoards()
     @Published var activityTerminal: Int?
-
-    func expandActivityTerminal(_ id: Int) {
-        expandedActivityTerminals.insert(id)
-        activityTerminal = id
-    }
-
-    func collapseActivityTerminal(_ id: Int) {
-        expandedActivityTerminals.remove(id)
-        if activityTerminal == id { activityTerminal = nil }
-    }
-
-    func toggleActivityTerminal(_ id: Int) {
-        if activityTerminal == id && expandedActivityTerminals.contains(id) {
-            collapseActivityTerminal(id)
-        } else {
-            expandActivityTerminal(id)
-        }
-    }
-
     @Published var selected: WorkspaceTab = .keys
     @Published var tabs: [TabActivity] = []
+
+    func navigate(_ kind: GridTabKind, to target: GridTabTarget) -> Bool {
+        let groups = activityBoards.boards
+        let board = activityBoards.current
+        if kind == .page && (!selected.showsTerminals || board.pageCount < 2) { return false }
+        let count = kind == .group ? groups.count : board.pageCount
+        let index: Int
+        switch target {
+        case .index(let position): index = position
+        case .step(let delta):
+            let current = kind == .group ? (groups.firstIndex { $0.id == board.id } ?? 0) : board.page
+            index = (current + delta + count) % count
+        }
+        guard (0..<count).contains(index) else { return false }
+        activityTerminal = nil
+        switch kind {
+        case .group: activityBoards.select(groups[index].id)
+        case .page: activityBoards.setPage(index)
+        }
+        return true
+    }
 }
 
-enum WorkspaceTab: Hashable { case keys, activity, automations, settings, shell(Int) }
+enum WorkspaceTab: Hashable {
+    case keys, activity, automations, settings, shell(Int)
+
+    var showsTerminals: Bool {
+        switch self {
+        case .activity, .shell: return true
+        default: return false
+        }
+    }
+}
 
 private struct ShellTabFramesKey: PreferenceKey {
     static let defaultValue: [Int: CGRect] = [:]
@@ -148,13 +184,6 @@ private extension View {
 struct FavoriteTabs: View {
     @ObservedObject var state: WorkspaceState
     let select: (WorkspaceTab) -> Void
-    let create: () -> Void
-    let close: (Int) -> Void
-    let move: (Int, Int) -> Void
-    @State private var dropTarget: Int?
-    @State private var tabFrames: [Int: CGRect] = [:]
-    @GestureState private var draggedTab: Int?
-
     private func tabBadge(_ icon: String, title: String?) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
@@ -172,68 +201,88 @@ struct FavoriteTabs: View {
         }.help(label).accessibilityLabel(label)
          .accessibilityAddTraits(state.selected == tab ? .isSelected : [])
     }
-    private func dragTarget(at point: CGPoint) -> Int? {
-        guard let row = tabFrames.values.first,
-              (row.minY - 14 ... row.maxY + 14).contains(point.y) else { return nil }
-        return tabFrames.min { abs($0.value.midX - point.x) < abs($1.value.midX - point.x) }?.key
+    private var showsAppName: Bool {
+        if case .shell = state.selected { return false }
+        return true
     }
+    @State private var renaming: ActivityBoard?
+
+    private func showBoard(_ id: Int) {
+        state.activityTerminal = nil
+        state.activityBoards.select(id)
+        select(.activity)
+    }
+
     var body: some View {
+        GeometryReader { geometry in
+            let showName = geometry.size.width >= 490 && showsAppName
+            let showDirectory = geometry.size.width >= 680 && !state.titleDirectory.isEmpty
+            HStack(spacing: 5) {
+                if showName || showDirectory {
+                    if showName { Text("bananaShell").font(Font(terminalFont(size: NSFont.systemFontSize))) }
+                    if showDirectory {
+                        Text(verbatim: state.titleDirectory).foregroundStyle(.secondary)
+                            .lineLimit(1).truncationMode(.middle).frame(maxWidth: 160, alignment: .leading)
+                            .help(state.titleDirectory)
+                    }
+                }
+                primaryRow.padding(.leading, showName || showDirectory ? 5 : 0)
+            }.frame(maxHeight: .infinity)
+        }
+        .buttonStyle(.plain)
+        .sheet(item: $renaming) { board in
+            RenameBoardSheet(board: board) { name in state.activityBoards.rename(board.id, to: name) }
+        }
+    }
+
+    private func closeBoard(_ id: Int) {
+        let active = state.activityBoards.selected == id
+        state.activityBoards.close(id)
+        if active && state.selected.showsTerminals { showBoard(state.activityBoards.selected) }
+    }
+
+    private var primaryRow: some View {
         HStack(spacing: 5) {
             favorite(.keys, "key", "SSH Keys")
-            favorite(.activity, "waveform.path.ecg", "Activity")
-            favorite(.automations, "clock.arrow.circlepath", "Automations")
-            Divider().frame(height: 20)
+            favorite(.automations, "clock.arrow.circlepath", "Automations").padding(.trailing, 5)
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
-                        ForEach(state.tabs) { tab in
+                        ForEach(Array(state.activityBoards.boards.enumerated()), id: \.element.id) { index, board in
+                            let selected = state.selected.showsTerminals && state.activityBoards.selected == board.id
                             HStack(spacing: 0) {
-                                HStack(spacing: 6) {
-                                    tab.icon(fallback: "terminal.fill", size: 16)
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(state.selected == .shell(tab.id) ? sessionAccent : Color.secondary)
-                                        .accessibilityHidden(true)
-                                    Text(tab.compactTitle).font(.system(size: 12, weight: .medium))
-                                        .frame(maxWidth: 150, alignment: .leading)
-                                        .fixedSize(horizontal: true, vertical: false)
-                                    if ShellTabShortcuts.keys.indices.contains(tab.shortcutSlot) {
-                                        Text(verbatim: "⌘\(ShellTabShortcuts.keys[tab.shortcutSlot])")
-                                            .font(.system(size: 11, design: .monospaced))
-                                            .foregroundStyle(.secondary)
-                                    }
+                                HStack(spacing: 5) {
+                                    Text(verbatim: board.title).font(TabTypography.favoriteLabel).lineLimit(1)
+                                    if let keys = GridTabKind.group.shortcut(at: index) { TabShortcutLabel(keys: keys) }
                                 }
-                                    .lineLimit(1).padding(.horizontal, 9).frame(height: 28)
+                                    .padding(.leading, 10).padding(.trailing, 4).frame(maxWidth: 200, minHeight: 28)
+                                    .fixedSize(horizontal: true, vertical: false)
                                     .contentShape(Rectangle())
-                                    .onTapGesture { select(.shell(tab.id)) }
-                                    .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("shellTabs"))
-                                        .updating($draggedTab) { _, dragged, _ in dragged = tab.id }
-                                        .onChanged { dropTarget = dragTarget(at: $0.location) }
-                                        .onEnded { value in
-                                            if let target = dragTarget(at: value.location) {
-                                                withAnimation(.easeInOut(duration: 0.15)) { move(tab.id, target) }
-                                            }
-                                        })
+                                    .gesture(TapGesture(count: 2).exclusively(before: TapGesture()).onEnded { tap in
+                                        switch tap {
+                                        case .first: renaming = board
+                                        case .second: showBoard(board.id)
+                                        }
+                                    })
+                                    .help(board.title + GridTabKind.group.hint(at: index) + " · Double-click to rename")
                                     .accessibilityAddTraits(.isButton)
-                                    .accessibilityAction { select(.shell(tab.id)) }
-                                    .help(tab.name + ShellTabShortcuts.hint(at: tab.shortcutSlot))
-                                 .accessibilityAddTraits(state.selected == .shell(tab.id) ? .isSelected : [])
-                                Button { close(tab.id) } label: { Image(systemName: "xmark").font(.caption2).padding(6) }
-                                    .help("Close tab").accessibilityLabel("Close tab")
-                            }.tabFace(selected: state.selected == .shell(tab.id))
-                             .background(GeometryReader { geometry in
-                                 Color.clear.preference(key: ShellTabFramesKey.self,
-                                                        value: [tab.id: geometry.frame(in: .named("shellTabs"))])
-                             })
-                             .opacity(draggedTab == tab.id ? 0.65 : 1)
-                             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(
-                                draggedTab != nil && draggedTab != tab.id && dropTarget == tab.id
-                                    ? sessionAccent : .clear, lineWidth: 1.5)
-                                .allowsHitTesting(false))
-                             .id(tab.id)
+                                    .accessibilityAddTraits(selected ? .isSelected : [])
+                                    .accessibilityAction { showBoard(board.id) }
+                                Button { closeBoard(board.id) } label: {
+                                    Image(systemName: "xmark").font(.caption2).frame(width: 22, height: 26)
+                                }
+                                .disabled(state.activityBoards.boards.count == 1)
+                                .help(state.activityBoards.boards.count == 1 ? "Keep one group open" : "Close group and move its terminals to the adjacent group")
+                                .accessibilityLabel("Close group " + board.title)
+                            }
+                            .tabFace(selected: selected)
+                            .contextMenu {
+                                Button("Rename Tab…") { renaming = board }
+                                Button("Close Tab") { closeBoard(board.id) }.disabled(state.activityBoards.boards.count == 1)
+                            }.id(board.id)
                         }
-                    }.coordinateSpace(name: "shellTabs")
-                     .onPreferenceChange(ShellTabFramesKey.self) { tabFrames = $0 }
-                }.frame(minWidth: 80).onChange(of: state.selected) { if case let .shell(id) = $0 { proxy.scrollTo(id) } }
+                    }
+                }.onChange(of: state.activityBoards.selected) { proxy.scrollTo($0) }
             }
             if state.selected == .keys {
                 Menu {
@@ -244,73 +293,297 @@ struct FavoriteTabs: View {
                     .help("Add SSH key").accessibilityLabel("Add SSH key")
             } else {
                 let automation = state.selected == .automations
-                Button { if automation { state.addAutomation.send() } else { create() } } label: {
+                Button { if automation { state.addAutomation.send() } else { state.activityBoards.add(); showBoard(state.activityBoards.selected) } } label: {
                     Image(systemName: "plus").frame(width: 30, height: 28)
-                }.help(automation ? "Add Automation" : "New terminal (⌘T)")
-                 .accessibilityLabel(automation ? "Add Automation" : "New terminal")
+                }.help(automation ? "Add Automation" : "New group tab")
+                 .accessibilityLabel(automation ? "Add Automation" : "New group tab")
             }
             favorite(.settings, "gearshape", "Settings")
-        }.buttonStyle(.plain).padding(.horizontal, 10).frame(maxWidth: .infinity, maxHeight: .infinity)
-         .background(Color(nsColor: state.tabColor))
-         .overlay(alignment: .bottom) { Rectangle().fill(.white.opacity(0.09)).frame(height: 1).allowsHitTesting(false) }
-    }
-}
-
-enum ActivityPreviewText {
-    static func tail(_ rows: [String]) -> String {
-        guard let last = rows.lastIndex(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { return "" }
-        return rows[max(0, last - 2)...last].joined(separator: "\n")
-    }
-}
-
-private struct ExpandedActivityCardKey: LayoutValueKey {
-    static let defaultValue = false
-}
-
-private struct ActivityCardWidthKey: LayoutValueKey {
-    static let defaultValue: CGFloat? = nil
-}
-
-/// Pack independently sized cards without remounting their borrowed terminal views.
-private struct ActivityCardLayout: Layout {
-    private let spacing: CGFloat = 12
-    private let minimumWidth: CGFloat = 320
-
-    private func positions(_ subviews: Subviews, width: CGFloat) -> (rects: [CGRect], height: CGFloat) {
-        guard !subviews.isEmpty else { return ([], 0) }
-        let columns = max(1, min(subviews.count, Int((width + spacing) / (minimumWidth + spacing))))
-        let cardWidth = (width - CGFloat(columns - 1) * spacing) / CGFloat(columns)
-        var rects: [CGRect] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-
-        for view in subviews {
-            let requestedWidth = view[ActivityCardWidthKey.self]
-                ?? (view[ExpandedActivityCardKey.self] ? ActivityPaneSize.defaultWidth(available: width) : cardWidth)
-            let itemWidth = ActivityPaneSize.clampedWidth(requestedWidth, available: width)
-            if x > 0 && x + itemWidth > width + 0.5 {
-                y += rowHeight + spacing
-                x = 0
-                rowHeight = 0
-            }
-            let height = view.sizeThatFits(ProposedViewSize(width: itemWidth, height: nil)).height
-            rects.append(CGRect(x: x, y: y, width: itemWidth, height: height))
-            rowHeight = max(rowHeight, height)
-            x += itemWidth + spacing
         }
-        return (rects, y + rowHeight)
     }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = max(1, proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 400)
-        return CGSize(width: width, height: positions(subviews, width: width).height)
+}
+
+private struct GridLayoutIcon: Shape {
+    let columns: Int
+
+    func path(in rect: CGRect) -> Path {
+        let side = min(rect.width, rect.height)
+        let gap: CGFloat = columns == 1 ? 0 : 1.5
+        let cell = (side - gap * CGFloat(columns - 1)) / CGFloat(columns)
+        let origin = CGPoint(x: rect.midX - side / 2, y: rect.midY - side / 2)
+        var path = Path()
+        for row in 0..<columns {
+            for column in 0..<columns {
+                let tile = CGRect(x: origin.x + CGFloat(column) * (cell + gap),
+                                  y: origin.y + CGFloat(row) * (cell + gap), width: cell, height: cell)
+                path.addRoundedRect(in: tile, cornerSize: CGSize(width: min(1.5, cell * 0.22), height: min(1.5, cell * 0.22)))
+            }
+        }
+        return path
+    }
+}
+
+struct TerminalToolbar: View {
+    @ObservedObject var state: WorkspaceState
+    let select: (WorkspaceTab) -> Void
+    let create: () -> Void
+    let close: (Int) -> Void
+    let move: (Int, Int) -> Void
+
+    var body: some View {
+        if state.selected.showsTerminals {
+            terminalRow.buttonStyle(.plain).background(Color(nsColor: state.tabColor))
+        }
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (view, rect) in zip(subviews, positions(subviews, width: bounds.width).rects) {
-            view.place(at: CGPoint(x: bounds.minX + rect.minX, y: bounds.minY + rect.minY),
-                       anchor: .topLeading, proposal: ProposedViewSize(rect.size))
+    private var board: ActivityBoard { state.activityBoards.current }
+
+    private var terminalRow: some View {
+        HStack(spacing: 6) {
+            TerminalTabStrip(state: state, select: select, close: close, move: move)
+            let others = state.tabs.filter { !board.slots.contains($0.shortcutSlot) }
+            if !others.isEmpty {
+                Menu {
+                    ForEach(others) { tab in
+                        Button(tab.name + ShellTabShortcuts.hint(at: tab.shortcutSlot)) {
+                            select(.activity)
+                            state.activityBoards.move(tab.shortcutSlot, to: board.id)
+                            state.activityTerminal = tab.id
+                        }
+                    }
+                } label: { Image(systemName: "arrow.down.to.line") }
+                    .menuStyle(.borderlessButton).fixedSize().help("Move a running terminal here")
+                    .accessibilityLabel("Move terminal here")
+            }
+            Button(action: create) { Image(systemName: "plus").frame(width: 24, height: 26) }
+                .help("New terminal (⌘T)").accessibilityLabel("New terminal")
+            if state.selected == .activity {
+                HStack(spacing: 2) {
+                    ForEach(ActivityGrid.allCases, id: \.self) { grid in
+                        let selected = grid == board.grid
+                        Button {
+                            let slot = state.tabs.first { $0.id == state.activityTerminal }?.shortcutSlot
+                            state.activityBoards.setGrid(grid, keeping: slot)
+                        } label: {
+                            HStack(spacing: 5) {
+                                GridLayoutIcon(columns: grid.rawValue).frame(width: 14, height: 14)
+                                    .accessibilityHidden(true)
+                                Text(grid.label).font(.system(size: 12, weight: .medium)).monospacedDigit()
+                            }.frame(maxWidth: .infinity).frame(height: 22)
+                                .foregroundStyle(selected ? Color.black.opacity(0.86) : .primary)
+                                .background(selected ? sessionAccent : .clear, in: RoundedRectangle(cornerRadius: 5))
+                                .contentShape(Rectangle())
+                        }
+                        .help("Show \(grid.capacity) \(grid == .single ? "terminal" : "terminals")")
+                        .accessibilityLabel("Show \(grid.capacity) \(grid == .single ? "terminal" : "terminals")")
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                }.padding(2).frame(width: 148)
+                 .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+            }
+        }.padding(.horizontal, 10).frame(height: 36)
+    }
+}
+
+private struct RenameBoardSheet: View {
+    let board: ActivityBoard
+    let save: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @FocusState private var focused: Bool
+
+    init(board: ActivityBoard, save: @escaping (String) -> Void) {
+        self.board = board
+        self.save = save
+        _name = State(initialValue: board.title)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Rename Tab").font(.headline)
+            TextField("Tab name", text: $name).focused($focused)
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Rename") { save(name); dismiss() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }.padding(20).frame(width: 300).onAppear { focused = true }
+    }
+}
+
+private struct TerminalTabStrip: View {
+    private enum Anchor: Hashable { case page(group: Int, index: Int), terminal(Int) }
+
+    private var showsPageGroups: Bool {
+        let board = state.activityBoards.current
+        return board.grid != .single && board.pageCount > 1
+    }
+
+    private var scrollAnchor: Anchor? {
+        let board = state.activityBoards.current
+        if case .shell(let id) = state.selected { return .terminal(id) }
+        if showsPageGroups { return .page(group: board.id, index: board.page) }
+        if board.grid == .single, let slot = board.visibleSlots.first,
+           let tab = state.tabs.first(where: { $0.shortcutSlot == slot }) { return .terminal(tab.id) }
+        return nil
+    }
+
+    @ObservedObject var state: WorkspaceState
+    let select: (WorkspaceTab) -> Void
+    let close: (Int) -> Void
+    let move: (Int, Int) -> Void
+    @State private var hoveredPage: Int?
+    @State private var dropTarget: Int?
+    @State private var tabFrames: [Int: CGRect] = [:]
+    @GestureState private var draggedTab: Int?
+
+    private func dragTarget(at point: CGPoint) -> Int? {
+        guard let row = tabFrames.values.first,
+              (row.minY - 14 ... row.maxY + 14).contains(point.y) else { return nil }
+        return tabFrames.min { abs($0.value.midX - point.x) < abs($1.value.midX - point.x) }?.key
+    }
+    private struct PageClosure {
+        let number: Int
+        let sessionIDs: [Int]
+    }
+    @State private var pendingClosure: PageClosure?
+
+    private func pageTab(_ page: Int, board: ActivityBoard) -> some View {
+        let active = page == board.page
+        return HStack(spacing: 0) {
+            Button {
+                if state.navigate(.page, to: .index(page)) { select(.activity) }
+            } label: {
+                HStack(spacing: 6) {
+                    Capsule().fill(active ? sessionAccent : Color.secondary.opacity(0.55))
+                        .frame(width: 3, height: active ? 14 : 8)
+                    Text("Page \(page + 1)").font(.system(size: 11, weight: .semibold)).monospacedDigit()
+                    if let shortcut = GridTabKind.page.shortcut(at: page) {
+                        Text(verbatim: shortcut).font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .fixedSize().padding(.leading, 10).padding(.trailing, 4).frame(height: 28)
+                .foregroundStyle(active ? sessionAccent : Color.primary.opacity(0.8))
+                .contentShape(Rectangle())
+            }
+            .help("Page \(page + 1) of \(board.pageCount)" + GridTabKind.page.hint(at: page))
+            .accessibilityLabel("Page \(page + 1) of \(board.pageCount)")
+            .accessibilityAddTraits(active ? .isSelected : [])
+
+            Button {
+                let slots = Set(board.slots(on: page))
+                let ids = state.tabs.filter { slots.contains($0.shortcutSlot) }.map(\.id)
+                if !ids.isEmpty { pendingClosure = PageClosure(number: page + 1, sessionIDs: ids) }
+            } label: {
+                Image(systemName: "xmark").font(.caption2).frame(width: 22, height: 26)
+            }
+            .help("Close page and its terminals")
+            .accessibilityLabel("Close page \(page + 1)")
+        }
+        .background((active ? sessionAccent : Color.primary)
+            .opacity((active ? 0.11 : 0.035) + (hoveredPage == page ? 0.07 : 0)))
+        .overlay(alignment: .trailing) {
+            Rectangle().fill(Color.primary.opacity(0.10)).frame(width: 1)
+        }
+        .onHover { inside in
+            if inside { hoveredPage = page } else if hoveredPage == page { hoveredPage = nil }
+        }
+    }
+
+    private func terminalTab(_ tab: TabActivity) -> some View {
+        let board = state.activityBoards.current
+        let visibleSingle = board.grid == .single && board.visibleSlots.first == tab.shortcutSlot
+        let selected = state.selected == .shell(tab.id) || (state.selected == .activity && (state.activityTerminal == tab.id || visibleSingle))
+        return HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                tab.icon(fallback: "terminal.fill", size: 16)
+                    .font(.system(size: 12))
+                    .foregroundStyle(selected ? sessionAccent : Color.secondary)
+                    .accessibilityHidden(true)
+                Text(tab.compactTitle).font(.system(size: 12, weight: .medium))
+                    .frame(maxWidth: 150, alignment: .leading)
+                    .fixedSize(horizontal: true, vertical: false)
+                if ShellTabShortcuts.keys.indices.contains(tab.shortcutSlot) {
+                    TabShortcutLabel(keys: "⌘" + ShellTabShortcuts.keys[tab.shortcutSlot])
+                }
+            }
+                .lineLimit(1).padding(.leading, 8).padding(.trailing, 2).frame(height: 28)
+                .contentShape(Rectangle())
+                .onTapGesture { select(.shell(tab.id)) }
+                .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("shellTabs"))
+                    .updating($draggedTab) { _, dragged, _ in dragged = tab.id }
+                    .onChanged { dropTarget = dragTarget(at: $0.location) }
+                    .onEnded { value in
+                        if let target = dragTarget(at: value.location) {
+                            withAnimation(.easeInOut(duration: 0.15)) { move(tab.id, target) }
+                        }
+                    })
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { select(.shell(tab.id)) }
+                .help(tab.name + ShellTabShortcuts.hint(at: tab.shortcutSlot))
+             .accessibilityAddTraits(selected ? .isSelected : [])
+            Button { close(tab.id) } label: { Image(systemName: "xmark").font(.caption2).padding(.horizontal, 8).frame(height: 26) }
+                .help("Close tab").accessibilityLabel("Close tab")
+        }.tabFace(selected: selected)
+         .background(GeometryReader { geometry in
+             Color.clear.preference(key: ShellTabFramesKey.self,
+                                    value: [tab.id: geometry.frame(in: .named("shellTabs"))])
+         })
+         .opacity(draggedTab == tab.id ? 0.65 : 1)
+         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(
+            draggedTab != nil && draggedTab != tab.id && dropTarget == tab.id
+                ? sessionAccent : .clear, lineWidth: 1.5)
+            .allowsHitTesting(false))
+         .id(Anchor.terminal(tab.id))
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: showsPageGroups ? 12 : 4) {
+                    let board = state.activityBoards.current
+                    ForEach(0..<board.pageCount, id: \.self) { page in
+                        let grouped = showsPageGroups
+                        let active = page == board.page
+                        let outline = RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        HStack(spacing: 0) {
+                            if grouped {
+                                pageTab(page, board: board)
+                                    .id(Anchor.page(group: board.id, index: page))
+                            }
+                            HStack(spacing: 4) {
+                                ForEach(board.slots(on: page), id: \.self) { slot in
+                                    if let tab = state.tabs.first(where: { $0.shortcutSlot == slot }) { terminalTab(tab) }
+                                }
+                            }
+                            .padding(.leading, grouped ? 4 : 0)
+                        }
+                        .background(grouped ? Color.primary.opacity(0.035) : .clear)
+                        .clipShape(outline)
+                        .overlay {
+                            if grouped {
+                                outline.strokeBorder(active ? sessionAccent.opacity(0.24) : Color.primary.opacity(0.12))
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    }
+                }.coordinateSpace(name: "shellTabs")
+                 .onPreferenceChange(ShellTabFramesKey.self) { tabFrames = $0 }
+            }.frame(minWidth: 80)
+             .onAppear { if let anchor = scrollAnchor { proxy.scrollTo(anchor) } }
+             .onChange(of: scrollAnchor) { if let anchor = $0 { proxy.scrollTo(anchor) } }
+        }
+        .alert("Close Page \(pendingClosure?.number ?? 1)?",
+               isPresented: Binding(get: { pendingClosure != nil }, set: { if !$0 { pendingClosure = nil } }),
+               presenting: pendingClosure) { request in
+            Button("Cancel", role: .cancel) {}
+            Button("Close Page", role: .destructive) { request.sessionIDs.forEach(close) }
+        } message: { request in
+            Text("Terminals to close: \(request.sessionIDs.count). Running processes in these terminals will stop.")
         }
     }
 }
@@ -319,185 +592,154 @@ struct ActivityPanel: View {
     @ObservedObject var state: WorkspaceState
     let terminalView: (Int) -> NSView?
     let close: (Int) -> Void
-    @State private var focusRequest: UInt = 0
+    let create: () -> Void
+    let releaseFocus: () -> Void
+    let expand: (Int) -> Void
 
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    ActivityCardLayout {
-                        ForEach(state.tabs) { tab in
-                            let available = max(1, geometry.size.width - 40)
-                            let fallback = CGSize(width: ActivityPaneSize.defaultWidth(available: available), height: max(220, min(420, geometry.size.height * 0.65)))
-                            let size = state.activityPaneSizes[tab.id]?.fitting(available: available) ?? fallback
-                            terminalCard(tab, size: size, available: available)
-                                .layoutValue(key: ExpandedActivityCardKey.self, value: state.expandedActivityTerminals.contains(tab.id))
-                                .layoutValue(key: ActivityCardWidthKey.self, value: state.expandedActivityTerminals.contains(tab.id) ? state.activityPaneSizes[tab.id]?.width : nil)
-                                .id(tab.id)
-                        }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .onReceive(state.focusActivityTerminal) { id in
-                    guard state.selected == .activity, state.tabs.contains(where: { $0.id == id }) else { return }
-                    state.toggleActivityTerminal(id)
-                    if state.activityTerminal != nil {
-                        focusRequest &+= 1
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                }
-                .onChange(of: state.activityTerminal) { id in
-                    if let id { proxy.scrollTo(id, anchor: .top) }
-                }
-            }.padding(20)
-        }
-        .onChange(of: state.tabs.map(\.id)) { ids in
-            state.expandedActivityTerminals.formIntersection(ids)
-            if let active = state.activityTerminal, !ids.contains(active) { state.activityTerminal = nil }
+    private var board: ActivityBoard { state.activityBoards.current }
+
+    private func blur() {
+        state.activityTerminal = nil
+        releaseFocus()
+    }
+
+    private func toggleFocus(_ tab: TabActivity) {
+        if state.activityTerminal == tab.id { blur() }
+        else {
+            state.activityBoards.reveal(tab.shortcutSlot)
+            state.activityTerminal = tab.id
         }
     }
 
-    private func terminalCard(_ tab: TabActivity, size: CGSize, available: CGFloat) -> some View {
-        let open = state.expandedActivityTerminals.contains(tab.id)
-        let focused = state.activityTerminal == tab.id
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
-                Button {
-                    if open { state.collapseActivityTerminal(tab.id) }
-                    else { state.expandActivityTerminal(tab.id); focusRequest &+= 1 }
-                } label: {
-                HStack(spacing: 10) {
-                    tab.icon(fallback: tab.busy ? "waveform" : "terminal", size: 20)
-                        .foregroundStyle(tab.busy ? sessionAccent : .secondary)
-                        .frame(width: 24)
-                    HStack(spacing: 8) {
-                        Text(tab.name).font(.system(size: 13, weight: .semibold))
-                            .lineLimit(1).layoutPriority(1)
-                        Text(tab.directory).font(.caption).foregroundStyle(.secondary)
-                            .lineLimit(1).truncationMode(.middle).help(tab.directory)
-                    }
-                    Spacer(minLength: 4)
-                    if !tab.limits.isEmpty {
-                        Text(ClaudeLimits.compactSummary(tab.limits))
-                            .font(.system(size: 11, weight: .medium)).monospacedDigit()
-                            .foregroundStyle(.secondary).lineLimit(1).fixedSize()
-                            .help(tab.limits.joined(separator: "\n") + "\n" + tab.status)
-                            .accessibilityLabel(tab.limits.joined(separator: ". "))
-                    }
-                    if ShellTabShortcuts.keys.indices.contains(tab.shortcutSlot) {
-                        Text(verbatim: "⌘" + ShellTabShortcuts.keys[tab.shortcutSlot])
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(focused ? sessionAccent : .secondary)
-                            .padding(.horizontal, 6).padding(.vertical, 3)
-                            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                            .help("Toggle terminal in Activity" + ShellTabShortcuts.hint(at: tab.shortcutSlot))
-                    }
-                    if tab.limits.isEmpty {
-                        Text(tab.status).font(.caption)
-                            .foregroundStyle(tab.busy ? sessionAccent : .secondary).lineLimit(1)
-                    }
-                    Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(.caption).foregroundStyle(.secondary)
-                }.padding(12).contentShape(Rectangle())
-            }.buttonStyle(.plain)
-             .help(open ? "Collapse terminal" : "Show terminal in Activity")
-             .accessibilityLabel((open ? "Collapse " : "Show ") + tab.name)
-             .accessibilityAddTraits(open ? .isSelected : [])
-                Button { close(tab.id) } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .medium))
-                        .frame(width: 28, height: 28).contentShape(Rectangle())
-                }.buttonStyle(.plain)
-                 .help("Close terminal").accessibilityLabel("Close " + tab.name)
-                 .padding(.trailing, 8)
-            }
-
-            if open && state.selected == .activity, let terminal = terminalView(tab.id) {
-                Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-                ActivityTerminal(terminal: terminal, focusRequest: focusRequest, isVisible: {
-                    state.selected == .activity && state.expandedActivityTerminals.contains(tab.id) && state.tabs.contains { $0.id == tab.id }
-                }, wantsFocus: {
-                    state.selected == .activity && state.activityTerminal == tab.id && state.expandedActivityTerminals.contains(tab.id)
-                })
-                    .frame(height: size.height).padding(10)
-                    .background(Color(nsColor: state.tabColor))
-                    .id(tab.id)
-                HStack(spacing: 8) {
-                    Button { state.activityPaneSizes.removeValue(forKey: tab.id) } label: {
-                        Image(systemName: "arrow.uturn.backward").font(.system(size: 10))
-                            .frame(width: 24, height: 22)
-                    }.buttonStyle(.plain)
-                     .help("Reset terminal size").accessibilityLabel("Reset terminal size")
-                    Spacer(minLength: 0)
-                    Text("Drag corner to resize").font(.system(size: 10)).foregroundStyle(.secondary)
-                    ActivityResizeHandle(size: size, available: available) { newSize in
-                        state.activityPaneSizes[tab.id] = newSize
-                    }
-                }.padding(.leading, 6)
-                 .background(Color(nsColor: state.tabColor))
-
-            } else if !open {
-                Button { state.expandActivityTerminal(tab.id); focusRequest &+= 1 } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array((tab.preview.isEmpty ? "No output yet." : tab.preview)
-                            .components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
-                            Text(verbatim: line.isEmpty ? " " : line)
-                                .lineLimit(1).truncationMode(.tail)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+    var body: some View {
+        VStack(spacing: 8) {
+            if board.slots.isEmpty {
+                VStack(spacing: 8) {
+                    Text("No terminals in this tab").foregroundStyle(.secondary)
+                    Button("New Terminal", action: create)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { geometry in
+                    let layout = ActivityTileLayout(viewport: geometry.size, grid: board.grid)
+                    let gap = ActivityTileLayout.gap
+                    ScrollView(.vertical) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.fixed(layout.cardSize.width), spacing: gap), count: board.grid.rawValue), spacing: gap) {
+                            ForEach(Array(board.visibleSlots), id: \.self) { slot in
+                                if let tab = state.tabs.first(where: { $0.shortcutSlot == slot }) {
+                                    card(tab, layout: layout).frame(width: layout.cardSize.width, height: layout.cardSize.height).clipped()
+                                }
+                            }
                         }
-                    }
-                    .font(Font(terminalFont(size: 11)))
-                    .foregroundStyle(.primary.opacity(0.7))
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
-                    .padding(.horizontal, 12).padding(.vertical, 10)
-                    .background(.black.opacity(0.12))
-                    .contentShape(Rectangle())
-                }.buttonStyle(.plain).help("Show terminal in Activity")
-                 .accessibilityLabel("Show " + tab.name)
+                    }.padding(ActivityTileLayout.outerInset)
+                }
             }
         }
-        .background(Color.white.opacity(open ? 0.055 : 0.025))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10)
-            .strokeBorder(focused ? sessionAccent.opacity(0.6) : open ? .white.opacity(0.2) : .white.opacity(0.08)))
+        .onReceive(state.focusActivityTerminal) { id in
+            guard state.selected == .activity, let tab = state.tabs.first(where: { $0.id == id }) else { return }
+            toggleFocus(tab)
+        }
+    }
+
+    @ViewBuilder
+    private func cardTitle(_ tab: TabActivity, width: CGFloat) -> some View {
+        let usage = ClaudeLimits.compactSummary(tab.limits)
+        let details = ([tab.name, tab.directory, tab.status] + tab.limits).joined(separator: "\n")
+        let label = HStack(spacing: 5) {
+            if width >= 170 {
+                tab.icon(fallback: "terminal", size: 14)
+                    .foregroundStyle(tab.busy ? sessionAccent : .secondary)
+            }
+            Text(tab.compactTitle).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+            if width >= 390 {
+                Text(tab.directory).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
+            Spacer(minLength: 0)
+            if width >= 245 && (!usage.isEmpty || width >= 390) {
+                Text(usage.isEmpty ? tab.status : usage).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            if width >= 150, ShellTabShortcuts.keys.indices.contains(tab.shortcutSlot) {
+                Text(verbatim: "⌘" + ShellTabShortcuts.keys[tab.shortcutSlot]).font(.caption).foregroundStyle(.secondary)
+            }
+        }.frame(height: ActivityTileLayout.header).contentShape(Rectangle())
+
+        if board.grid == .single {
+            Button { toggleFocus(tab) } label: { label }.buttonStyle(.plain).help(details)
+        } else {
+            label.overlay {
+                TerminalTitleClickArea(single: { toggleFocus(tab) }, double: { expand(tab.id) })
+                    .accessibilityHidden(true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggleFocus(tab) }
+            .accessibilityAction(named: Text("Expand terminal")) { expand(tab.id) }
+            .help(details + "\nDouble-click to expand terminal")
+        }
+    }
+
+    private func card(_ tab: TabActivity, layout: ActivityTileLayout) -> some View {
+        let width = layout.cardSize.width
+        let focused = state.activityTerminal == tab.id
+        return VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                cardTitle(tab, width: width)
+                Button { close(tab.id) } label: {
+                    Image(systemName: "xmark").font(.caption).frame(width: 20, height: 22)
+                }.buttonStyle(.plain).help("Close terminal").accessibilityLabel("Close " + tab.name)
+            }.padding(.horizontal, 6).frame(height: ActivityTileLayout.header)
+             .background(.white.opacity(0.055))
+             .contextMenu {
+                 ForEach(state.activityBoards.boards.filter { $0.id != board.id }) { target in
+                     Button("Move to " + target.title) {
+                         if focused { blur() }
+                         state.activityBoards.move(tab.shortcutSlot, to: target.id)
+                     }
+                 }
+             }
+
+            if state.selected == .activity, let terminal = terminalView(tab.id) {
+                ActivityTerminal(terminal: terminal, size: layout.terminalSize, isVisible: {
+                    state.selected == .activity && state.activityBoards.current.visibleSlots.contains(tab.shortcutSlot)
+                }, wantsFocus: {
+                    state.selected == .activity && state.activityTerminal == tab.id
+                }).padding([.horizontal, .bottom], ActivityTileLayout.inset)
+            } else { Spacer() }
+        }.background(Color(nsColor: state.tabColor))
+         .clipShape(RoundedRectangle(cornerRadius: 7))
+         .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(focused ? sessionAccent : .white.opacity(0.14)).allowsHitTesting(false))
     }
 }
 
-/// Keep the gesture origin stable while SwiftUI lays out the resized terminal.
-private struct ActivityResizeHandle: View {
-    let size: CGSize
-    let available: CGFloat
-    let resize: (ActivityPaneSize) -> Void
-    @State private var dragStart: CGSize?
+// AppKit supplies the user's system double-click interval and click count.
+private struct TerminalTitleClickArea: NSViewRepresentable {
+    let single: () -> Void
+    let double: () -> Void
 
-    var body: some View {
-        Image(systemName: "arrow.up.left.and.arrow.down.right")
-            .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            .frame(width: 28, height: 24).contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
-                .onChanged { value in
-                    if dragStart == nil { dragStart = size }
-                    resize(ActivityPaneSize.resized(from: dragStart ?? size, translation: value.translation, available: available))
-                }
-                .onEnded { _ in dragStart = nil })
-            .help("Drag to resize terminal width and height")
-            .accessibilityLabel("Resize terminal")
-            .accessibilityValue("\(Int(size.width)) by \(Int(size.height)) points")
-            .accessibilityAdjustableAction { direction in
-                let delta: CGFloat = direction == .increment ? 40 : -40
-                resize(ActivityPaneSize.resized(from: size, translation: CGSize(width: 0, height: delta), available: available))
-            }
+    final class HitArea: NSView {
+        var click: ((Int) -> Void)?
+        override func mouseDown(with event: NSEvent) { click?(event.clickCount) }
+        override var mouseDownCanMoveWindow: Bool { false }
+    }
+
+    func makeNSView(context: Context) -> HitArea { HitArea() }
+    func updateNSView(_ view: HitArea, context: Context) {
+        view.click = { count in
+            if count == 2 { double() }
+            else if count == 1 { single() }
+        }
     }
 }
 
 /// Borrow the existing terminal view so input, scrollback and the PTY stay in the same session.
 private struct ActivityTerminal: NSViewRepresentable {
     let terminal: NSView
-    let focusRequest: UInt
+    let size: CGSize
     let isVisible: () -> Bool
     let wantsFocus: () -> Bool
 
     final class Container: NSView {
         private var terminal: NSView?
-        private var lastFocusRequest: UInt?
+        private var requestedFocus = false
         private var pendingFocus: (() -> Bool)?
 
         override func viewDidMoveToWindow() {
@@ -505,24 +747,27 @@ private struct ActivityTerminal: NSViewRepresentable {
             focusWhenAttached()
         }
 
-        func attach(_ view: NSView, focusRequest: UInt = 0, isVisible: @escaping () -> Bool, wantsFocus: @escaping () -> Bool) {
+        func attach(_ view: NSView, size: CGSize, isVisible: @escaping () -> Bool, wantsFocus: @escaping () -> Bool) {
             guard isVisible() else { detach(); return }
             let attaching = view.superview !== self
             if attaching {
                 detach()
                 terminal = view
                 view.removeFromSuperview()
-                view.frame = bounds
-                view.autoresizingMask = [.width, .height]
+                view.autoresizingMask = []
                 addSubview(view)
             }
+            // SwiftUI may first mount this container with empty bounds. Only
+            // resize the borrowed terminal to the measured tile, never a probe size.
+            let frame = CGRect(origin: .zero, size: size)
+            if view.frame != frame { view.frame = frame }
             guard wantsFocus() else {
-                lastFocusRequest = nil
+                requestedFocus = false
                 pendingFocus = nil
                 return
             }
-            guard attaching || lastFocusRequest != focusRequest else { return }
-            lastFocusRequest = focusRequest
+            guard attaching || !requestedFocus else { return }
+            requestedFocus = true
             pendingFocus = wantsFocus
             focusWhenAttached()
         }
@@ -549,16 +794,16 @@ private struct ActivityTerminal: NSViewRepresentable {
                 terminal.removeFromSuperview()
             }
             terminal = nil
-            lastFocusRequest = nil
+            requestedFocus = false
             pendingFocus = nil
         }
     }
 
     func makeNSView(context: Context) -> Container {
         let container = Container()
-        container.attach(terminal, focusRequest: focusRequest, isVisible: isVisible, wantsFocus: wantsFocus)
+        container.attach(terminal, size: size, isVisible: isVisible, wantsFocus: wantsFocus)
         return container
     }
-    func updateNSView(_ view: Container, context: Context) { view.attach(terminal, focusRequest: focusRequest, isVisible: isVisible, wantsFocus: wantsFocus) }
+    func updateNSView(_ view: Container, context: Context) { view.attach(terminal, size: size, isVisible: isVisible, wantsFocus: wantsFocus) }
     static func dismantleNSView(_ view: Container, coordinator: ()) { view.detach() }
 }

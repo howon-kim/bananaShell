@@ -117,7 +117,7 @@ struct PromptSettings: View {
     @State private var search = ""
     @State private var hexDraft = ""
 
-    private let accent = Color(red: 0.46, green: 0.87, blue: 0.76)
+    private let accent = SettingsStyle.accent
     private var tint: Color { RGB(customAccent)?.color ?? (Palette(rawValue: palette) ?? .violet).color }
     private var files: [URL] { library.files }
     private var selectedFile: URL? {
@@ -436,7 +436,7 @@ struct PromptSettings: View {
     }
 
     private func sectionTitle(_ title: String) -> some View {
-        Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+        Text(title).settingsSectionTitle()
     }
 
     private func builtInSample(_ layout: PromptDesign, compact: Bool = false) -> String {
@@ -462,8 +462,16 @@ struct PromptSettings: View {
     }
 }
 
-private extension View {
-    func settingsSurface(selected: Bool = false, accent: Color) -> some View {
+enum SettingsStyle {
+    static let accent = Color(red: 0.46, green: 0.87, blue: 0.76)
+}
+
+extension View {
+    func settingsSectionTitle() -> some View {
+        self.font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+    }
+
+    func settingsSurface(selected: Bool = false, accent: Color = SettingsStyle.accent) -> some View {
         self.background(selected ? accent.opacity(0.065) : Color.white.opacity(0.025))
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(selected ? accent.opacity(0.65) : .white.opacity(0.09)))

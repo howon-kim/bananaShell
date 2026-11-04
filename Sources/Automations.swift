@@ -110,11 +110,13 @@ struct JobScheduler {
             var job = ScheduledJob(id: id, name: name, command: args.count == 3 ? args[2] : (p["bananaShellCommand"] as? String ?? "Terminal recording"), directory: directory, hour: time["Hour"] ?? 0, minute: minute, hourly: time["Hour"] == nil)
             if p["bananaShellConfirmation"] as? Bool == true {
                 let replay = replayURL(job)
-                if args == ["/usr/bin/expect", replay.path],
-                   let old = try? String(contentsOf: replay, encoding: .utf8),
-                   let updated = InputTape.updatedDialog(in: old) {
-                    try Data(updated.utf8).write(to: replay, options: .atomic)
-                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: replay.path)
+                if args == ["/usr/bin/expect", replay.path], let old = try? String(contentsOf: replay, encoding: .utf8) {
+                    let dialog = InputTape.updatedDialog(in: old) ?? old
+                    let updated = InputTape.updatedTerminalOutput(in: dialog) ?? dialog
+                    if updated != old {
+                        try Data(updated.utf8).write(to: replay, options: .atomic)
+                        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: replay.path)
+                    }
                 }
                 job.policy = (try? String(contentsOf: policyURL(job), encoding: .utf8)).flatMap(ConfirmationPolicy.init(rawValue:)) ?? .ask
             }
@@ -122,7 +124,8 @@ struct JobScheduler {
         }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
     private var logFolder: URL { home.appendingPathComponent("Library/Logs/bananaShell") }
-    private func logURL(_ job: ScheduledJob) -> URL { logFolder.appendingPathComponent(job.label + ".log") }
+    func logURL(_ job: ScheduledJob) -> URL { logFolder.appendingPathComponent(job.label + ".log") }
+    func terminalSizeURL(_ job: ScheduledJob) -> URL { replayURL(job).appendingPathExtension("size") }
 
     func outputEnd(_ job: ScheduledJob) throws -> UInt64 {
         do {
@@ -249,66 +252,97 @@ struct JobScheduler {
         let replay = replayURL(job)
         if FileManager.default.fileExists(atPath: replay.path) { try FileManager.default.removeItem(at: replay) }
         if FileManager.default.fileExists(atPath: policyURL(job).path) { try FileManager.default.removeItem(at: policyURL(job)) }
+        if FileManager.default.fileExists(atPath: terminalSizeURL(job).path) { try FileManager.default.removeItem(at: terminalSizeURL(job)) }
         try FileManager.default.removeItem(at: file(job))
-    }
-}
-
-private struct CardRows: Layout {
-    private func positions(_ views: Subviews, width: CGFloat) -> ([CGRect], CGFloat) {
-        var rects: [CGRect] = [], x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
-        for view in views {
-            let w = min(width, view.sizeThatFits(.unspecified).width)
-            let h = view.sizeThatFits(ProposedViewSize(width: w, height: nil)).height
-            if x > 0 && x + w > width { x = 0; y += rowHeight + 8; rowHeight = 0 }
-            rects.append(CGRect(x: x, y: y, width: w, height: h))
-            x += w + 8; rowHeight = max(rowHeight, h)
-        }
-        return (rects, y + rowHeight)
-    }
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let w = proposal.width ?? 400
-        return CGSize(width: w, height: positions(subviews, width: w).1)
-    }
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (view, rect) in zip(subviews, positions(subviews, width: bounds.width).0) {
-            view.place(at: CGPoint(x: bounds.minX + rect.minX, y: bounds.minY + rect.minY),
-                       anchor: .topLeading, proposal: ProposedViewSize(rect.size))
-        }
     }
 }
 
 struct AutomationPanel: View {
     let addRequest: PassthroughSubject<Void, Never>
-    private let scheduler = JobScheduler()
+    private let scheduler: JobScheduler
+    private let runningLabels: () throws -> Set<String>
+    init(addRequest: PassthroughSubject<Void, Never>, scheduler: JobScheduler = .init(),
+         runningLabels: @escaping () throws -> Set<String> = JobScheduler.runningLabels) {
+        self.addRequest = addRequest
+        self.scheduler = scheduler
+        self.runningLabels = runningLabels
+    }
     @State private var jobs: [ScheduledJob] = []
     @State private var running: Set<String> = []
+    @State private var waiting: Set<String> = []
     @State private var observedEnds: [String: UInt64] = [:]
     @State private var logStarts: [String: UInt64] = [:]
-    @State private var expanded: UUID?
+    @State private var query = ""
+    @State private var selection: UUID?
+    @State private var showingDetail = false
+    @State private var copied: String?
     @State private var adding = false
     @State private var removal: ScheduledJob?
     @State private var error: String?
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Automations", systemImage: "clock.arrow.circlepath").font(.title2.bold())
-                Spacer()
 
-            }
-            if let error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
-            if jobs.isEmpty && error == nil {
-                Text("No automations yet. Use + in the tab bar to add one.").foregroundStyle(.secondary)
-            }
-            ScrollView {
-                CardRows {
-                    ForEach(jobs) { job in card(job) }
-                }.frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }.padding(18).onAppear { reload() }
+    private var matches: [ScheduledJob] {
+        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return term.isEmpty ? jobs : jobs.filter { job in
+            [job.name, job.command, job.directory, job.schedule].contains { $0.localizedCaseInsensitiveContains(term) }
+        }
+    }
+    private var current: ScheduledJob? { matches.first(where: { $0.id == selection }) ?? matches.first }
+
+    var body: some View {
+        GeometryReader { geo in
+            let narrow = geo.size.width < 690
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Automations")
+                            .font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .title1).pointSize, relativeTo: .title))
+                            .bold().kerning(-0.6)
+                        Text("Scheduled commands · Local time")
+                            .font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize + 1, relativeTo: .caption))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                if let error { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
+                if jobs.isEmpty {
+                    emptyState("No automations yet", message: "Use + in the tab bar to record and schedule commands.", icon: "clock.arrow.circlepath")
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        if !narrow || !showingDetail {
+                            VStack(alignment: .leading, spacing: 14) {
+                                TextField("Search by name, command, or folder", text: $query)
+                                    .textFieldStyle(.roundedBorder)
+                                    .accessibilityLabel("Search automations")
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(matches) { job in sidebarRow(job) }
+                                        if matches.isEmpty { Text("No matching automations").foregroundStyle(.secondary) }
+                                    }
+                                }
+                            }.frame(maxWidth: narrow ? .infinity : 260)
+                        }
+                        if !narrow { Divider() }
+                        if !narrow || showingDetail {
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    if narrow { Button("‹  All Automations") { showingDetail = false } }
+                                    if let job = current {
+                                        detail(job, terminalHeight: max(260, min(420, geo.size.height - 300)))
+                                    } else {
+                                        emptyState("No matching automations", message: "Try a different name, command, or folder.", icon: "magnifyingglass")
+                                    }
+                                }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
+                            }
+                        }
+                    }
+                }
+            }.padding(20)
+        }.onAppear { reload() }
         .task {
+            let readLabels = runningLabels
             while !Task.isCancelled {
                 do {
-                    let labels = try await Task.detached(priority: .utility) { try JobScheduler.runningLabels() }.value
+                    let labels = try await Task.detached(priority: .utility) { try readLabels() }.value
                     guard !Task.isCancelled else { break }
                     for job in jobs {
                         let key = job.label
@@ -319,12 +353,15 @@ struct AutomationPanel: View {
                         let completedBetweenPolls = !labels.contains(key) && !running.contains(key)
                             && previous.map { end > $0 } == true
                         if started || completedBetweenPolls {
-                            logStarts[key] = previous ?? end
-                            expanded = job.id
+                            logStarts[key] = previous ?? 0
+                            selection = job.id
+                            showingDetail = true
                         }
                         observedEnds[key] = end
                     }
                     if labels != running { running = labels }
+                    let requests = Set(jobs.filter { labels.contains($0.label) && scheduler.pendingQuestion($0) != nil }.map(\.label))
+                    if requests != waiting { waiting = requests }
                 } catch { self.error = error.localizedDescription }
                 do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { break }
             }
@@ -332,7 +369,9 @@ struct AutomationPanel: View {
         .onReceive(addRequest) { adding = true }
         .sheet(isPresented: $adding) { JobEditor { job in
             try scheduler.add(job)
-            expanded = job.id
+            selection = job.id
+            query = ""
+            showingDetail = true
             adding = false
             reload()
         } }
@@ -343,64 +382,176 @@ struct AutomationPanel: View {
             Button("Cancel", role: .cancel) {}
         } message: { Text($0.name + " will no longer run on schedule.") }
     }
-    private func card(_ job: ScheduledJob) -> some View {
-        let word = InputTape.commandWords(job.command).first?.drop(while: {
-            $0.range(of: #"^[A-Za-z_][A-Za-z_0-9]*="#, options: .regularExpression) != nil
-        }).first
-        let name = word.map { ($0 as NSString).lastPathComponent } ?? job.name
-        let active = running.contains(job.label)
-        let open = active || expanded == job.id
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 4) {
-                Button { expanded = expanded == job.id ? nil : job.id } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text(verbatim: name).font(.system(.body, design: .monospaced).weight(.semibold)).lineLimit(1)
-                            if active { Label("Running", systemImage: "waveform").font(.caption).foregroundStyle(.green) }
+
+    private func sidebarRow(_ job: ScheduledJob) -> some View {
+        HStack(spacing: 6) {
+            Button { selection = job.id; showingDetail = true } label: {
+                HStack {
+                    mark(job, size: 34)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(verbatim: job.name).lineLimit(1)
+                        HStack(spacing: 5) {
+                            if running.contains(job.label) {
+                                Circle().fill(waiting.contains(job.label) ? Color.orange : Color.green).frame(width: 5, height: 5)
+                            }
+                            Text(job.schedule).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
                         }
-                        Text(job.schedule).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(job.name + " · " + job.command)
-                Button {
-                    do {
-                        if active { try scheduler.stopCurrentRun(job) }
-                        else {
-                            let offset = try scheduler.outputEnd(job)
-                            try scheduler.runNow(job)
-                            logStarts[job.label] = offset
-                            observedEnds[job.label] = try scheduler.outputEnd(job)
-                            expanded = job.id
-                        }
-                        running = try JobScheduler.runningLabels()
-                        error = nil
-                    } catch { self.error = error.localizedDescription }
-                } label: { Image(systemName: active ? "stop.fill" : "play.fill").frame(width: 24, height: 24) }
-                .buttonStyle(.borderless).help(active ? "Stop current run" : "Run now")
-                .accessibilityLabel((active ? "Stop " : "Run ") + job.name)
-            }.padding(.horizontal, 10).frame(height: 50)
-            if open, let offset = logStarts[job.label] { AutomationLog(job: job, offset: offset, active: active).id("\(job.id):\(offset)").padding([.horizontal, .bottom], 10) }
-        }
-        .frame(minWidth: 0, idealWidth: open ? 420 : 200, maxWidth: open ? 420 : 200, alignment: .leading)
-        .background(open ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.12),
-                    in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    Spacer(minLength: 0)
+                }.contentShape(Rectangle())
+            }.help(job.name + " · " + job.command)
+             .accessibilityAddTraits(current?.id == job.id ? .isSelected : [])
+            Button { toggleRun(job) } label: {
+                Image(systemName: running.contains(job.label) ? "stop.fill" : "play.fill").frame(width: 18, height: 24)
+            }.help(running.contains(job.label) ? "Stop current run" : "Run now")
+             .accessibilityLabel((running.contains(job.label) ? "Stop " : "Run ") + job.name)
+        }.buttonStyle(.plain).padding(8)
+         .background(current?.id == job.id ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
         .contextMenu {
-            Text(job.command)
-            Text((job.directory as NSString).abbreviatingWithTildeInPath)
+            Button(running.contains(job.label) ? "Stop Current Run" : "Run Now") { toggleRun(job) }
             Divider()
-            if let current = job.policy {
-                Picker("Confirmation", selection: Binding(get: { current }, set: { value in
-                    do { try scheduler.setPolicy(value, for: job); reload() }
-                    catch { self.error = error.localizedDescription }
-                })) {
-                    ForEach(ConfirmationPolicy.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-            }
             Button("Delete Automation…", role: .destructive) { removal = job }
         }
     }
 
+    private func mark(_ job: ScheduledJob, size: CGFloat) -> some View {
+        let ink: Color = waiting.contains(job.label) ? .orange : running.contains(job.label) ? .green : .accentColor
+        return Image(systemName: waiting.contains(job.label) ? "bubble.left" : "clock.arrow.circlepath")
+            .font(.system(size: size * 0.45, weight: .medium)).foregroundStyle(ink)
+            .frame(width: size, height: size)
+            .background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: 9)).accessibilityHidden(true)
+    }
+
+    @ViewBuilder private func detail(_ job: ScheduledJob, terminalHeight: CGFloat) -> some View {
+        let active = running.contains(job.label)
+        let offset = logStarts[job.label] ?? 0
+        HStack(alignment: .top, spacing: 14) {
+            mark(job, size: 56)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: job.name).font(.title2.bold()).fixedSize(horizontal: false, vertical: true)
+                Text(job.schedule).font(.caption.monospaced()).foregroundStyle(.secondary)
+                if active {
+                    Label(waiting.contains(job.label) ? "Waiting for input" : "Running",
+                          systemImage: waiting.contains(job.label) ? "bubble.left" : "waveform")
+                        .font(.caption).foregroundStyle(waiting.contains(job.label) ? .orange : .green)
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Button { toggleRun(job) } label: {
+                Label(active ? "Stop" : "Run now", systemImage: active ? "stop.fill" : "play.fill")
+            }.buttonStyle(.borderedProminent)
+             .accessibilityLabel((active ? "Stop " : "Run ") + job.name)
+            Menu {
+                Button("Delete Automation…", role: .destructive) { removal = job }
+            } label: { Image(systemName: "ellipsis").frame(width: 20, height: 24) }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .help("Automation actions").accessibilityLabel("Automation actions")
+        }
+        Divider()
+        if active || (observedEnds[job.label] ?? 0) > offset {
+            AutomationRun(job: job, offset: offset, active: active, scheduler: scheduler, terminalHeight: terminalHeight)
+                .id("\(job.id):\(offset)")
+        } else {
+            emptyState("Ready to run", message: "The live terminal appears here when this automation starts.", icon: "terminal")
+                .frame(height: terminalHeight)
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+        }
+        Divider()
+        VStack(alignment: .leading, spacing: 24) {
+            copyField("Command", job.command, icon: "terminal")
+            copyField("Working directory", (job.directory as NSString).abbreviatingWithTildeInPath, icon: "folder")
+            if let policy = job.policy {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Confirmation").settingsSectionTitle()
+                    HStack(spacing: 8) {
+                        ForEach(ConfirmationPolicy.allCases, id: \.self) { option in
+                            confirmationOption(option, selected: policy == option, job: job)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func copyField(_ title: String, _ value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).settingsSectionTitle()
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(.secondary)
+                    .frame(width: 18, height: 20).accessibilityHidden(true)
+                Text(verbatim: value).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(value, forType: .string)
+                    copied = value
+                } label: {
+                    Image(systemName: copied == value ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 12)).foregroundStyle(copied == value ? SettingsStyle.accent : .secondary)
+                        .frame(width: 24, height: 22).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                    .help("Copy " + title).accessibilityLabel("Copy " + title)
+            }.padding(16).settingsSurface()
+        }.task(id: copied) {
+            guard copied == value else { return }
+            do { try await Task.sleep(nanoseconds: 1_500_000_000); copied = nil } catch {}
+        }
+    }
+
+    private func confirmationOption(_ policy: ConfirmationPolicy, selected: Bool, job: ScheduledJob) -> some View {
+        Button {
+            do { try scheduler.setPolicy(policy, for: job); reload() }
+            catch { self.error = error.localizedDescription }
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: policy == .ask ? "bubble.left" : "checkmark.circle")
+                    Spacer(minLength: 0)
+                    if selected { Image(systemName: "checkmark.circle.fill") }
+                }.font(.system(size: 13)).foregroundStyle(selected ? SettingsStyle.accent : .secondary)
+                 .accessibilityHidden(true)
+                Text(policy.title).font(.system(size: 12, weight: .semibold)).lineLimit(2)
+                Text(policy == .ask ? "Wait for my response" : "Send y and Enter")
+                    .font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+             .contentShape(RoundedRectangle(cornerRadius: 9))
+        }.buttonStyle(.plain).settingsSurface(selected: selected)
+         .accessibilityLabel(policy.title)
+         .accessibilityAddTraits(selected ? .isSelected : [])
+         .accessibilityRemoveTraits(selected ? [] : .isSelected)
+    }
+
+    private func emptyState(_ title: String, message: String, icon: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon).font(.largeTitle).foregroundStyle(.secondary)
+            Text(title).font(.headline)
+            Text(message).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func toggleRun(_ job: ScheduledJob) {
+        do {
+            if running.contains(job.label) { try scheduler.stopCurrentRun(job) }
+            else {
+                let offset = try scheduler.outputEnd(job)
+                try scheduler.runNow(job)
+                logStarts[job.label] = offset
+                observedEnds[job.label] = offset
+            }
+            selection = job.id
+            query = ""
+            showingDetail = true
+            running = try runningLabels()
+            error = nil
+        } catch { self.error = error.localizedDescription }
+    }
+
     private func reload() {
-        do { jobs = try scheduler.jobs(); error = nil } catch { self.error = error.localizedDescription }
+        do {
+            jobs = try scheduler.jobs()
+            if !jobs.contains(where: { $0.id == selection }) { selection = matches.first?.id }
+            error = nil
+        } catch { self.error = error.localizedDescription }
     }
 }
 
@@ -476,20 +627,30 @@ private struct JobEditor: View {
     }
 }
 
-private struct AutomationLog: View {
+private struct AutomationRun: View {
     let job: ScheduledJob
     let offset: UInt64
     let active: Bool
-    private let scheduler = JobScheduler()
+    let scheduler: JobScheduler
+    let terminalHeight: CGFloat
     @State private var pending: JobScheduler.PendingQuestion?
     @State private var sent: String?
     @State private var responseError: String?
-    @State private var showLog = false
-    @State private var output = ""
-    @State private var failure: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Circle().fill(active ? Color.green : Color.secondary).frame(width: 6, height: 6)
+                Text(active ? "Live terminal" : "Terminal output").font(.caption.weight(.medium))
+                Spacer()
+                Text((job.directory as NSString).abbreviatingWithTildeInPath)
+                    .font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
+            AutomationConsole(outputURL: scheduler.logURL(job), offset: offset,
+                              sizeURL: job.policy != nil ? scheduler.terminalSizeURL(job) : nil,
+                              active: active)
+                .frame(height: terminalHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
             if let pending {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "bubble.left.fill").font(.caption).foregroundStyle(.orange)
@@ -516,36 +677,19 @@ private struct AutomationLog: View {
                  .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
             }
             if let responseError { Text(responseError).foregroundStyle(.red) }
-            if let failure {
-                Text(failure).foregroundStyle(.red).textSelection(.enabled)
-            } else if output.isEmpty {
-                Text("No output recorded yet.").foregroundStyle(.secondary)
-            } else {
-                DisclosureGroup("Run log", isExpanded: $showLog) {
-                    ScrollView([.vertical, .horizontal]) {
-                    Text(verbatim: output).font(.body.monospaced()).textSelection(.enabled).padding(10)
-                }.frame(maxWidth: .infinity, alignment: .topLeading).frame(height: 144)
-                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-                }.font(.caption)
-                if !showLog && pending == nil, let last = output.split(whereSeparator: \.isNewline).last {
-                    Text(verbatim: String(last)).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(2)
-                }
-            }
         }
         .task(id: active) {
-            readOutput()
+            readQuestion()
             while active && !Task.isCancelled {
-                do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { break }
-                readOutput()
+                do { try await Task.sleep(nanoseconds: 250_000_000) } catch { break }
+                readQuestion()
             }
         }
     }
-    private func readOutput() {
+    private func readQuestion() {
         if active { scheduler.markViewing(job) }
         let next = active ? scheduler.pendingQuestion(job) : nil
         if next != pending { pending = next; sent = nil; responseError = nil }
-        do { let latest = try scheduler.recentOutput(job, since: offset); if output != latest { output = latest }; failure = nil }
-        catch { output = ""; failure = error.localizedDescription }
     }
 }
 

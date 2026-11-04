@@ -9,8 +9,9 @@
 /* Begin PBXBuildFile section */
 		0AE0843D85AC9841316E08C0 /* Automations.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE664BF9F18F9852BBE4D10 /* Automations.swift */; };
 		0E73186253C549F6DD219C50 /* JetBrainsMonoNLNerdFontMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BE5C50900D630551A77B7FD5 /* JetBrainsMonoNLNerdFontMono-Regular.ttf */; };
+		140C2D1076EEC2898E325207 /* AutomationTerminal.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9605F97674906E9AB74D446 /* AutomationTerminal.swift */; };
 		220A6D859F5F1E3017AB4716 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 983AB667F0631675E6D10BD9 /* SwiftTerm */; };
-		3A274169535C297B77D2F919 /* ActivityPaneSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */; };
+		3A274169535C297B77D2F919 /* ActivityBoards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D2AAB8599D87F8CAA337F1 /* ActivityBoards.swift */; };
 		3A813B2A6C185EA49D9F7F52 /* PublicKeyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */; };
 		43E62FC64A1A74E7E89C68AB /* Sidebars.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8ED11AD06251BB51237C85 /* Sidebars.swift */; };
 		4BF56B719F4784C5C34E1642 /* ForegroundProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */; };
@@ -40,11 +41,12 @@
 		7C492121D2D16F4A756AD521 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		7C96696E973D980EC2CA93DE /* TerminalSlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSlots.swift; sourceTree = "<group>"; };
 		821C9B4585A30278DCBF7F39 /* Recording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recording.swift; sourceTree = "<group>"; };
-		87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityPaneSize.swift; sourceTree = "<group>"; };
+		87D2AAB8599D87F8CAA337F1 /* ActivityBoards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBoards.swift; sourceTree = "<group>"; };
 		978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicKeyPanel.swift; sourceTree = "<group>"; };
 		ADF7FCDB634B1DFBCCAC45F4 /* SUITE-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SUITE-Bold.otf"; sourceTree = "<group>"; };
 		AE8ED11AD06251BB51237C85 /* Sidebars.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sidebars.swift; sourceTree = "<group>"; };
 		BE5C50900D630551A77B7FD5 /* JetBrainsMonoNLNerdFontMono-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "JetBrainsMonoNLNerdFontMono-Regular.ttf"; sourceTree = "<group>"; };
+		C9605F97674906E9AB74D446 /* AutomationTerminal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationTerminal.swift; sourceTree = "<group>"; };
 		CF87135E3F244AE0B5D9A30F /* bananaShell.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = bananaShell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E72F68D9931DF67039DF2E5B /* JetBrainsMono-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "JetBrainsMono-OFL.txt"; sourceTree = "<group>"; };
 		ECE664BF9F18F9852BBE4D10 /* Automations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Automations.swift; sourceTree = "<group>"; };
@@ -65,8 +67,9 @@
 		23F066EBF3288049DFED9592 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				87D2AAB8599D87F8CAA337F1 /* ActivityPaneSize.swift */,
+				87D2AAB8599D87F8CAA337F1 /* ActivityBoards.swift */,
 				ECE664BF9F18F9852BBE4D10 /* Automations.swift */,
+				C9605F97674906E9AB74D446 /* AutomationTerminal.swift */,
 				6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */,
 				455628FE21F4768C4459036D /* main.swift */,
 				38F64639269C038AD14090E7 /* PromptSettings.swift */,
@@ -191,7 +194,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A274169535C297B77D2F919 /* ActivityPaneSize.swift in Sources */,
+				3A274169535C297B77D2F919 /* ActivityBoards.swift in Sources */,
+				140C2D1076EEC2898E325207 /* AutomationTerminal.swift in Sources */,
 				0AE0843D85AC9841316E08C0 /* Automations.swift in Sources */,
 				4BF56B719F4784C5C34E1642 /* ForegroundProgram.swift in Sources */,
 				B3E98AABB868491E61E16BC8 /* PromptSettings.swift in Sources */,

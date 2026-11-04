@@ -151,6 +151,7 @@ struct InputTape {
             close $f; file rename -force "$pending.tmp" $pending
             catch {exec /usr/bin/open -g -b local.bananaShell --args --automation-notification}
             while {$idx < 0} {
+                if {[llength [info commands updateTerminalSize]]} {updateTerminalSize}
                 if {[file exists $reply]} {
                     set f [open $reply r]; set decision [string trim [read $f]]; close $f
                     set idx [lsearch -exact $labels $decision]
@@ -162,7 +163,7 @@ struct InputTape {
 
         }
         send -- "[lindex $replies $idx]\r"
-        puts stderr "bananaShell: selected [lindex $labels $idx]"
+        puts stderr "\r\nbananaShell: selected [lindex $labels $idx]\r"
         if {$binary && $idx == $negative} {
             expect {
                 -exact $::ready {puts stderr "\nbananaShell: command finished; replay stopped after No."}
@@ -201,6 +202,49 @@ struct InputTape {
         let replacement = "\n" + promptPatternLine + "\n" + confirmationRuntime
         guard script[start.lowerBound..<end.lowerBound] != replacement else { return nil }
         return String(script[..<start.lowerBound]) + replacement + String(script[end.lowerBound...])
+    }
+
+    private static let terminalPreamble = #"""
+    # bananaShell live terminal v1
+    fconfigure stdout -translation binary -buffering none
+    set stty_init {rows 24 columns 100}
+    log_user 0
+    """#
+    private static let terminalRuntime = #"""
+    proc updateTerminalSize {} {
+        global terminalSize spawn_out
+        set path "[info script].size"
+        if {[catch {
+            set f [open $path r]
+            set value [read $f 32]; close $f
+            if {[regexp {^([0-9]{1,3}) ([0-9]{1,3})$} $value -> cols rows] &&
+                $cols >= 20 && $cols <= 500 && $rows >= 5 && $rows <= 200 && $value ne $terminalSize} {
+                stty rows $rows columns $cols < $spawn_out(slave,name)
+                set terminalSize $value
+            }
+        }]} {return}
+    }
+    proc watchTerminalSize {} {
+        updateTerminalSize
+        after 200 watchTerminalSize
+    }
+    set terminalSize {}
+    watchTerminalSize
+    """#
+
+    // Upgrade only our generated replays. Commands, anchors, replies and the
+    // confirmation policy stay intact. Expect's legacy user logger re-encodes
+    // binary spawn data as UTF-8. Its log channel honors stdout's binary
+    // encoding, preserving the original PTY bytes (including split UTF-8).
+    static func updatedTerminalOutput(in script: String) -> String? {
+        let channel = "fconfigure $spawn_id -encoding binary -translation binary\n"
+        let firstReady = "need $ready command-1 0\n"
+        guard script.hasPrefix("set env(TERM) xterm-256color\n"),
+              script.contains(channel), let ready = script.range(of: firstReady) else { return nil }
+        var result = script
+        result.insert(contentsOf: "log_file -a -leaveopen stdout\n", at: ready.upperBound)
+        result = result.replacingOccurrences(of: channel, with: channel + terminalRuntime + "\n")
+        return terminalPreamble + "\n" + result
     }
     func script(jobName: String = "bananaShell") -> String {
         let token = UUID().uuidString
@@ -250,7 +294,8 @@ struct InputTape {
         }
         rows += ["expect eof {} -re $confirmationRE {answer $expect_out(0,string); exp_continue} timeout {puts stderr {shell exit timeout}; exit 124}", "set result [wait]",
                  "if {[llength $result] != 4 || [lindex $result 2] != 0} {exit 1}", "exit [lindex $result 3]"]
-        return rows.joined(separator: "\n") + "\n"
+        let result = rows.joined(separator: "\n") + "\n"
+        return Self.updatedTerminalOutput(in: result) ?? result
     }
 }
 

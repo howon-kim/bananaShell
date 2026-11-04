@@ -14,6 +14,7 @@ unset _banana_user_dotdir BANANA_STARTUP_DIR BANANA_THEME_STATE BANANA_THEME_FIF
 _banana_original=$PROMPT
 _banana_original_right=$RPROMPT
 _banana_last_status=0
+_banana_first_prompt=yes
 
 # Engine output is data, not shell code. Protect literal percent signs and
 # mark ANSI sequences as zero-width so ZLE preserves the editing cursor.
@@ -52,6 +53,13 @@ _banana_render() {
         output=$("$bin" print primary "${args[@]}")
         right=$("$bin" print right "${args[@]}")
       fi
+      # Themes may add blank lines between commands. Skip that separator
+      # before the first prompt, but keep any real multiline header.
+      if [[ $_banana_first_prompt == yes ]]; then
+        while [[ $output == *$'\n'* && -z ${${output%%$'\n'*}//[[:space:]]/} ]]; do
+          output=${output#*$'\n'}
+        done
+      fi
       # A width-padded status row belongs to terminal output. If it is part of
       # PS1, ZLE replays its old padding at each intermediate window width.
       if [[ $output == *$'\n'* ]]; then
@@ -76,7 +84,7 @@ _banana_render() {
     PROMPT=$_banana_left RPROMPT=$_banana_right
   fi
 }
-_banana_precmd() { _banana_last_status=$?; _banana_render; }
+_banana_precmd() { _banana_last_status=$?; _banana_render; _banana_first_prompt=no; }
 _banana_update() {
   local byte
   sysread -i "$1" -s 4096 byte || return
