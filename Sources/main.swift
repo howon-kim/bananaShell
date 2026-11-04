@@ -32,7 +32,7 @@ enum ShellTabShortcuts {
                            kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9, kVK_ANSI_0, kVK_ANSI_Minus, kVK_ANSI_Equal].map(UInt16.init)
 
     static func hint(at index: Int) -> String {
-        keys.indices.contains(index) ? " (⌘\(keys[index]))" : ""
+        keys.indices.contains(index) ? " (\(NavigationKeys.shared.modifier(.terminal).symbol)\(keys[index]))" : ""
     }
 }
 
@@ -59,7 +59,19 @@ private final class ShellWindow: NSWindow {
     override func sendEvent(_ event: NSEvent) {
         // Option and Control key presses can go straight to the first responder
         // without AppKit looking for a menu key equivalent.
-        if handleGridShortcut(event) { return }
+        if event.type == .keyDown, isKeyWindow, attachedSheet == nil {
+            let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            if flags == .option || flags == .control,
+               let letter = event.characters(byApplyingModifiers: [])?.lowercased(),
+               let action = CreationKeys.actions.first(where: {
+                   CreationKeys.shared.modifier($0).flags == flags && CreationKeys.shared.key($0) == letter
+               }), let menu = NSApp.mainMenu?.item(withTitle: "Shell")?.submenu,
+               let item = menu.item(withTitle: "New " + action) {
+                if !event.isARepeat { menu.performActionForItem(at: menu.index(of: item)) }
+                return
+            }
+        }
+        if handleNavigationShortcut(event) { return }
         if event.type == .keyDown, attachedSheet == nil,
            event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty {
             if event.keyCode == UInt16(kVK_Escape), deactivateActivityTerminal?() == true { return }
@@ -78,14 +90,19 @@ private final class ShellWindow: NSWindow {
         }
     }
 
-    private func handleGridShortcut(_ event: NSEvent) -> Bool {
+    private func handleNavigationShortcut(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown, isKeyWindow, attachedSheet == nil else { return false }
-        let kind: GridTabKind
-        switch event.modifierFlags.intersection([.command, .shift, .option, .control]) {
-        case .control: kind = .group
-        case .option: kind = .page
-        default: return false
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        let keys = NavigationKeys.shared
+        if modifiers == keys.modifier(.terminal).flags,
+           let index = ShellTabShortcuts.keyCodes.firstIndex(of: event.keyCode), let selectTabAtIndex {
+            selectTabAtIndex(index)
+            return true
         }
+        let kind: GridTabKind
+        if modifiers == keys.modifier(.group).flags { kind = .group }
+        else if modifiers == keys.modifier(.page).flags { kind = .page }
+        else { return false }
         let target: GridTabTarget
         if let step = bracketStep(event) { target = .step(step) }
         else if let index = ShellTabShortcuts.keyCodes.prefix(10).firstIndex(of: event.keyCode) { target = .index(index) }
@@ -94,15 +111,7 @@ private final class ShellWindow: NSWindow {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
-        if event.type == .keyDown, isKeyWindow, attachedSheet == nil {
-            let index = ShellTabShortcuts.keyCodes.firstIndex(of: event.keyCode)
-            if modifiers == .command, let index, let selectTabAtIndex {
-                selectTabAtIndex(index)
-                return true
-            }
-            if handleGridShortcut(event) { return true }
-        }
+        if handleNavigationShortcut(event) { return true }
         return super.performKeyEquivalent(with: event)
     }
 }
@@ -344,7 +353,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let host = NSHostingView(rootView: FavoriteTabs(state: workspace, select: { [weak self] in self?.select($0) }))
         host.sizingOptions = []
         host.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
-        host.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        host.heightAnchor.constraint(equalToConstant: WorkspaceTabMetrics.height).isActive = true
         item.view = host
         item.autovalidates = false
         if #available(macOS 26, *) { item.isBordered = false; item.isNavigational = true }
@@ -381,9 +390,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
     func applicationWillTerminate(_ notification: Notification) { saveWindow(); try? FileManager.default.removeItem(at: themeDirectory) }
 
+    @objc func newGroup(_ sender: Any?) {
+        workspace.activityBoards.add()
+        workspace.activityTerminal = nil
+        select(.activity)
+    }
+
+    @objc func newPage(_ sender: Any?) {
+        select(.activity)
+        createTerminalTab(selecting: false, startingPage: true)
+    }
+
     @objc func newTab(_ sender: Any?) { createTerminalTab(selecting: workspace.selected != .activity) }
 
-    private func createTerminalTab(selecting: Bool, directory: String? = nil, restoredSlot: Int? = nil) {
+    private func createTerminalTab(selecting: Bool, directory: String? = nil, restoredSlot: Int? = nil, startingPage: Bool = false) {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         window.contentView?.layoutSubtreeIfNeeded()
         let initialDirectory = directory ?? FileManager.default.homeDirectoryForCurrentUser.path
@@ -405,7 +425,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         session.directory = initialDirectory
         let insertion = restoredSlot == nil ? sessions.firstIndex(where: { $0.shortcutSlot > slot }) ?? sessions.count : sessions.count
         sessions.insert(session, at: insertion)
-        workspace.activityBoards.insert(slot)
+        workspace.activityBoards.insert(slot, startingPage: startingPage)
         if workspace.selected == .activity { workspace.activityTerminal = serial }
         terminal.processDelegate = self
         if selecting { select(.shell(serial)) }
@@ -537,7 +557,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let busy = group > 0 && group != process?.shellPid
             var buffer = [CChar](repeating: 0, count: 1024)
             let name = busy && proc_name(group, &buffer, UInt32(buffer.count)) > 0 ? String(cString: buffer) : nil
-            let status = busy ? (name ?? "Foreground task") + " running" : (group > 0 ? "Shell active" : "Checking status")
+            let status = busy ? (name ?? "Foreground task") + " running" : (group > 0 ? "" : "Checking status")
             let icon = busy ? ForegroundProgram.icon(pid: group, name: name, title: session.title) : nil
             let limits = icon == "claude" ? ClaudeLimits.rows(at: themeDirectory.appendingPathComponent("limits-\(session.id)-\(group)")) : []
             return TabActivity(id: session.id, shortcutSlot: session.shortcutSlot, programIcon: icon, name: session.title, status: status,
@@ -573,7 +593,7 @@ MainActor.assumeIsolated {
     let menu = NSMenu()
     for (name, items) in [
         ("bananaShell", [("Prompt Settings…", "showPromptSettings:", ","), ("Quit bananaShell", "terminate:", "q")]),
-        ("Shell", [("New Tab", "newTab:", "t"), ("Close Tab", "closeTab:", "w"),
+        ("Shell", [("New Group", "newGroup:", CreationKeys.shared.key("Group")), ("New Page", "newPage:", CreationKeys.shared.key("Page")), ("New Terminal", "newTab:", CreationKeys.shared.key("Terminal")), ("Close Tab", "closeTab:", "w"),
                    ("Next Tab", "nextTab:", "}"), ("Previous Tab", "previousTab:", "{")]),
         ("Edit", [("Copy", "copy:", "c"), ("Paste", "paste:", "v")])
     ] {
@@ -588,11 +608,14 @@ MainActor.assumeIsolated {
             for (index, key) in ShellTabShortcuts.keys.enumerated() {
                 let item = submenu.addItem(withTitle: "Go to Tab \(index + 1)",
                                            action: #selector(AppDelegate.selectTab(_:)), keyEquivalent: key)
-                item.keyEquivalentModifierMask = .command
+                item.keyEquivalentModifierMask = NavigationKeys.shared.modifier(.terminal).flags
                 item.tag = index
                 item.target = delegate
             }
         }
+    }
+    for name in CreationKeys.actions {
+        menu.item(withTitle: "Shell")?.submenu?.item(withTitle: "New " + name)?.keyEquivalentModifierMask = CreationKeys.shared.modifier(name).flags
     }
     app.mainMenu = menu
     app.run()

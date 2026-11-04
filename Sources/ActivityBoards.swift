@@ -32,21 +32,50 @@ struct ActivityBoard: Codable, Identifiable, Equatable {
     var slots: [Int] = []
     var page = 0
 
+    // Explicit page starts split the slot list before automatic grid pagination.
+    // Optional so older saved boards decode without migration.
+    var pageBreaks: [Int]?
     var customTitle: String?
-    var title: String { customTitle ?? "Tab \(id)" }
-    var pageCount: Int { max(1, (slots.count + grid.capacity - 1) / grid.capacity) }
+    var title: String { customTitle ?? "Group \(id)" }
+    private var pages: [Range<Int>] {
+        let starts = [0] + (pageBreaks ?? []).filter { $0 > 0 && $0 < slots.count }.sorted()
+        return zip(starts, starts.dropFirst() + [slots.count]).flatMap { start, end in
+            stride(from: start, to: end, by: grid.capacity).map { $0..<min($0 + grid.capacity, end) }
+        }
+    }
+    var pageCount: Int { max(1, pages.count) }
     var visibleSlots: ArraySlice<Int> { slots(on: page) }
     func slots(on page: Int) -> ArraySlice<Int> {
-        slots.dropFirst(page * grid.capacity).prefix(grid.capacity)
+        let ranges = pages
+        guard ranges.indices.contains(page) else { return [] }
+        return slots[ranges[page]]
     }
 
     mutating func reveal(_ slot: Int) {
-        if let index = slots.firstIndex(of: slot) { page = index / grid.capacity }
+        if let index = slots.firstIndex(of: slot), let target = pages.firstIndex(where: { $0.contains(index) }) { page = target }
+    }
+
+    mutating func insert(_ slot: Int, startingPage: Bool) {
+        var breaks = pageBreaks ?? []
+        let index: Int
+        if startingPage {
+            index = slots.count
+            if index > 0 { breaks.append(index) }
+        } else if !visibleSlots.isEmpty && visibleSlots.count < grid.capacity {
+            index = visibleSlots.endIndex
+            breaks = breaks.map { $0 >= index ? $0 + 1 : $0 }
+        } else { index = slots.count }
+        pageBreaks = breaks
+        slots.insert(slot, at: index)
+        reveal(slot)
     }
 
     mutating func remove(_ slot: Int) {
+        guard let index = slots.firstIndex(of: slot) else { return }
         let anchor = visibleSlots.first { $0 != slot }
-        slots.removeAll { $0 == slot }
+        slots.remove(at: index)
+        pageBreaks = Set((pageBreaks ?? []).map { $0 > index ? $0 - 1 : $0 }
+            .filter { $0 > 0 && $0 < slots.count }).sorted()
         page = min(page, pageCount - 1)
         if let anchor { reveal(anchor) }
     }
@@ -85,13 +114,14 @@ struct ActivityBoards: Codable, Equatable {
         guard boards.count > 1, let i = boards.firstIndex(where: { $0.id == id }) else { return }
         let removed = boards.remove(at: i)
         let destination = min(i, boards.count - 1)
+        let offset = boards[destination].slots.count
+        boards[destination].pageBreaks = (boards[destination].pageBreaks ?? []) + (removed.pageBreaks ?? []).map { offset + $0 }
         boards[destination].slots += removed.slots
         if selected == id { selected = boards[destination].id }
     }
 
-    mutating func insert(_ slot: Int) {
-        boards[index].slots.append(slot)
-        boards[index].reveal(slot)
+    mutating func insert(_ slot: Int, startingPage: Bool = false) {
+        boards[index].insert(slot, startingPage: startingPage)
     }
 
     mutating func remove(_ slot: Int) {
@@ -127,7 +157,7 @@ struct ActivityBoards: Codable, Equatable {
         if boards.isEmpty { boards = [ActivityBoard(id: 1)] }
         selected = current.id
         for i in boards.indices {
-            boards[i].slots = boards[i].slots.filter { remaining.remove($0) != nil }
+            for slot in boards[i].slots where remaining.remove(slot) == nil { boards[i].remove(slot) }
             boards[i].page = min(max(0, boards[i].page), boards[i].pageCount - 1)
         }
         boards[index].slots += slots.filter(remaining.contains)

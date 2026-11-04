@@ -150,6 +150,7 @@ struct PromptSettings: View {
                                 libraryPicker
                                 preferences
                                 startup
+                                ShortcutSettings()
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(width: inspectorWidth)
                         ScrollView {
@@ -166,6 +167,7 @@ struct PromptSettings: View {
                     VStack(alignment: .leading, spacing: 24) {
                         header
                         startup
+                        ShortcutSettings()
                         preview
                         if enabled {
                             libraryPicker
@@ -212,7 +214,7 @@ struct PromptSettings: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Settings").font(.title.bold())
-                Text("Startup, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
+                Text("Startup, shortcuts, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
             Toggle("Custom prompt", isOn: $enabled)
@@ -246,8 +248,8 @@ struct PromptSettings: View {
                 .background(Color(nsColor: previewBackground))
                 .accessibilityLabel("Prompt preview: " + previewName)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.1)))
+        .clipShape(RoundedRectangle(cornerRadius: SurfaceRadius.panel))
+        .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.panel).strokeBorder(.white.opacity(0.1)))
     }
 
     private var libraryPicker: some View {
@@ -267,8 +269,8 @@ struct PromptSettings: View {
                             Text(item == .builtin ? "4 layouts" : "\(item.files.count) themes")
                                 .font(.caption).foregroundStyle(.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
-                         .contentShape(RoundedRectangle(cornerRadius: 9))
-                    }.buttonStyle(.plain)
+                         .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile))
                      .settingsSurface(selected: library == item, accent: accent)
                      .accessibilityAddTraits(library == item ? .isSelected : [])
                 }
@@ -291,8 +293,8 @@ struct PromptSettings: View {
                                 Spacer()
                                 if item == design { Image(systemName: "checkmark.circle.fill").foregroundStyle(accent) }
                             }.padding(.horizontal, 12).padding(.vertical, 10)
-                        }.contentShape(RoundedRectangle(cornerRadius: 9))
-                    }.buttonStyle(.plain).settingsSurface(selected: item == design, accent: accent)
+                        }.contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: item == design, accent: accent)
                      .accessibilityAddTraits(item == design ? .isSelected : [])
                 }
             }
@@ -336,7 +338,7 @@ struct PromptSettings: View {
                     Circle().fill(item.color).frame(width: 22, height: 22)
                         .overlay { if selected { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.black) } }
                         .padding(3).overlay(Circle().strokeBorder(selected ? item.color.opacity(0.65) : .clear))
-                }.buttonStyle(.plain).help(String(describing: item).capitalized)
+                }.buttonStyle(HoverButtonStyle(cornerRadius: 14)).help(String(describing: item).capitalized)
                  .accessibilityLabel(String(describing: item).capitalized)
                  .accessibilityAddTraits(selected ? .isSelected : [])
             }
@@ -401,11 +403,11 @@ struct PromptSettings: View {
             TextField("Search themes", text: $search).textFieldStyle(.plain)
             if !search.isEmpty {
                 Button { search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                    .buttonStyle(.plain).accessibilityLabel("Clear search")
+                    .buttonStyle(HoverButtonStyle()).accessibilityLabel("Clear search")
             }
         }.font(.callout).padding(8)
-         .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 7))
-         .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(.white.opacity(0.08)))
+         .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
+         .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tab).strokeBorder(.white.opacity(0.08)))
     }
 
     private func themeCard(_ file: URL) -> some View {
@@ -430,8 +432,8 @@ struct PromptSettings: View {
                     Spacer(minLength: 4)
                     if selected { Image(systemName: "checkmark.circle.fill").foregroundStyle(accent) }
                 }.padding(12)
-            }.contentShape(RoundedRectangle(cornerRadius: 9))
-        }.buttonStyle(.plain).settingsSurface(selected: selected, accent: accent)
+            }.contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+        }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: selected, accent: accent)
          .accessibilityLabel(library.title(file)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -473,8 +475,8 @@ extension View {
 
     func settingsSurface(selected: Bool = false, accent: Color = SettingsStyle.accent) -> some View {
         self.background(selected ? accent.opacity(0.065) : Color.white.opacity(0.025))
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(selected ? accent.opacity(0.65) : .white.opacity(0.09)))
+            .clipShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+            .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tile).strokeBorder(selected ? accent.opacity(0.65) : .white.opacity(0.09)))
     }
 }
 
@@ -600,5 +602,146 @@ private struct ThemeSampleView: NSViewRepresentable {
         let levels: [CGFloat] = [0, 95, 135, 175, 215, 255]
         let cube = value - 16
         return NSColor(srgbRed: levels[cube / 36] / 255, green: levels[cube / 6 % 6] / 255, blue: levels[cube % 6] / 255, alpha: 1)
+    }
+}
+
+// Keep letter preferences from earlier versions; missing modifiers default to Command.
+final class CreationKeys: ObservableObject {
+    static let shared = CreationKeys()
+    static let actions = ["Group", "Page", "Terminal"]
+    static let defaults = ["Group": "g", "Page": "p", "Terminal": "t"]
+    @Published private var overrides = UserDefaults.standard.dictionary(forKey: "creationCommandLetters") as? [String: String] ?? [:]
+    @Published private var modifiers = UserDefaults.standard.dictionary(forKey: "creationCommandModifiers") as? [String: String] ?? [:]
+
+    func key(_ action: String) -> String { overrides[action] ?? Self.defaults[action]! }
+    func modifier(_ action: String) -> NavigationModifier { modifiers[action].flatMap(NavigationModifier.init) ?? .command }
+    var isDefault: Bool { Self.actions.allSatisfy { key($0) == Self.defaults[$0] && modifier($0) == .command } }
+    func set(_ letter: String, modifier: NavigationModifier, for action: String) -> String? {
+        if modifier == .command && "acvwxzqhm".contains(letter) { return "That shortcut is reserved for editing or window controls." }
+        if Self.actions.contains(where: { $0 != action && key($0) == letter && self.modifier($0) == modifier }) {
+            return "Another creation action already uses that shortcut."
+        }
+        overrides[action] = letter
+        modifiers[action] = modifier.rawValue
+        apply()
+        return nil
+    }
+    func reset() { overrides = [:]; modifiers = [:]; apply() }
+    private func apply() {
+        UserDefaults.standard.set(overrides, forKey: "creationCommandLetters")
+        UserDefaults.standard.set(modifiers, forKey: "creationCommandModifiers")
+        let menu = NSApp.mainMenu?.item(withTitle: "Shell")?.submenu
+        for action in Self.actions {
+            let item = menu?.item(withTitle: "New " + action)
+            item?.keyEquivalent = key(action)
+            item?.keyEquivalentModifierMask = modifier(action).flags
+        }
+    }
+}
+
+private struct ShortcutSettings: View {
+    @ObservedObject private var creation = CreationKeys.shared
+    @ObservedObject private var navigation = NavigationKeys.shared
+    private let keyWidth: CGFloat = 80
+
+    private enum Column { case create, select }
+    private struct Target: Equatable { let scope: ShortcutScope; let column: Column }
+    @State private var recording: Target?
+    @State private var monitor: Any?
+    @State private var message: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Keyboard shortcuts").settingsSectionTitle()
+                Spacer()
+                Button("Restore defaults") { stop(); creation.reset(); navigation.reset() }
+                    .controlSize(.small)
+                    .disabled(navigation.isDefault && creation.isDefault)
+            }
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Text("Create").frame(width: keyWidth)
+                    Text("Select").frame(width: keyWidth)
+                }
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.vertical, 8)
+                ForEach(ShortcutScope.allCases, id: \.self) { scope in
+                    Divider()
+                    HStack {
+                        Image(systemName: scope.icon).foregroundStyle(SettingsStyle.accent).frame(width: 20)
+                        Text(scope.rawValue).font(.callout)
+                        Spacer(minLength: 4)
+                        let name = scope.rawValue
+                        keycap(creation.modifier(name).symbol + creation.key(name).uppercased(), Target(scope: scope, column: .create))
+                        keycap(navigation.modifier(scope).symbol + " 1–0", Target(scope: scope, column: .select))
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 7)
+                }
+                Divider()
+                Text(message ?? (recording == nil ? "Click a keycap, then press your shortcut." : "Press ⌘, ⌥ or ⌃ with " + (recording?.column == .create ? "a letter." : "a number. Shared modifiers swap rows.") + " Esc cancels."))
+                    .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            }.settingsSurface()
+        }
+        .onDisappear { stop() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
+    }
+
+    private func keycap(_ value: String, _ target: Target) -> some View {
+        let active = recording == target
+        return Button {
+            if active { stop() } else { start(target) }
+        } label: {
+            Text(verbatim: active ? "Press keys…" : value)
+                .font(TabTypography.suite(size: 12, relativeTo: .callout))
+                .foregroundStyle(active ? SettingsStyle.accent : Color.primary)
+                .frame(width: keyWidth, height: 26, alignment: .center)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: SurfaceRadius.control))
+                .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.control).strokeBorder(active ? SettingsStyle.accent : .clear))
+        }
+        .buttonStyle(HoverButtonStyle())
+        .accessibilityLabel((target.column == .create ? "Create " : "Select ") + target.scope.rawValue + " shortcut")
+        .accessibilityValue(active ? "Recording" : value)
+    }
+
+    private func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        recording = nil
+        message = nil
+    }
+
+    private func start(_ target: Target) {
+        stop()
+        recording = target
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown]) { event in
+            guard event.type == .keyDown else { stop(); return event }
+            if event.keyCode == 53 { stop(); return nil }
+            let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            guard let modifier = NavigationModifier.allCases.first(where: { $0.flags == flags }) else {
+                message = "Use one modifier: ⌘, ⌥ or ⌃. Esc cancels."
+                return nil
+            }
+            switch target.column {
+            case .select:
+                guard ShellTabShortcuts.keyCodes.prefix(10).contains(event.keyCode) else {
+                    message = "Press the modifier with a number from the top row."
+                    return nil
+                }
+                navigation.assign(modifier, to: target.scope)
+            case .create:
+                guard let letter = event.characters(byApplyingModifiers: [])?.lowercased(), letter.count == 1,
+                      letter.first?.isASCII == true, letter.first?.isLetter == true else {
+                    message = "Press the modifier with a letter (A–Z)."
+                    return nil
+                }
+                if let error = creation.set(letter, modifier: modifier, for: target.scope.rawValue) {
+                    message = error
+                    return nil
+                }
+            }
+            stop()
+            return nil
+        }
     }
 }

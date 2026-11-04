@@ -303,7 +303,7 @@ struct AutomationPanel: View {
                     }
                     Spacer()
                 }
-                if let error { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled).padding(.trailing, 20) }
                 if jobs.isEmpty {
                     emptyState("No automations yet", message: "Use + in the tab bar to record and schedule commands.", icon: "clock.arrow.circlepath")
                 } else {
@@ -332,11 +332,13 @@ struct AutomationPanel: View {
                                         emptyState("No matching automations", message: "Try a different name, command, or folder.", icon: "magnifyingglass")
                                     }
                                 }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
+                                 .padding(.trailing, 20)
                             }
                         }
                     }
                 }
-            }.padding(20)
+            }.padding([.leading, .vertical], 20)
+             .padding(.trailing, jobs.isEmpty || (narrow && !showingDetail) ? 20 : 0)
         }.onAppear { reload() }
         .task {
             let readLabels = runningLabels
@@ -405,7 +407,7 @@ struct AutomationPanel: View {
                 Image(systemName: running.contains(job.label) ? "stop.fill" : "play.fill").frame(width: 18, height: 24)
             }.help(running.contains(job.label) ? "Stop current run" : "Run now")
              .accessibilityLabel((running.contains(job.label) ? "Stop " : "Run ") + job.name)
-        }.buttonStyle(.plain).padding(8)
+        }.buttonStyle(HoverButtonStyle()).padding(8)
          .background(current?.id == job.id ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
         .contextMenu {
             Button(running.contains(job.label) ? "Stop Current Run" : "Run Now") { toggleRun(job) }
@@ -419,7 +421,7 @@ struct AutomationPanel: View {
         return Image(systemName: waiting.contains(job.label) ? "bubble.left" : "clock.arrow.circlepath")
             .font(.system(size: size * 0.45, weight: .medium)).foregroundStyle(ink)
             .frame(width: size, height: size)
-            .background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: 9)).accessibilityHidden(true)
+            .background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.tile)).accessibilityHidden(true)
     }
 
     @ViewBuilder private func detail(_ job: ScheduledJob, terminalHeight: CGFloat) -> some View {
@@ -489,7 +491,7 @@ struct AutomationPanel: View {
                     Image(systemName: copied == value ? "checkmark" : "doc.on.doc")
                         .font(.system(size: 12)).foregroundStyle(copied == value ? SettingsStyle.accent : .secondary)
                         .frame(width: 24, height: 22).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(HoverButtonStyle())
                     .help("Copy " + title).accessibilityLabel("Copy " + title)
             }.padding(16).settingsSurface()
         }.task(id: copied) {
@@ -514,8 +516,8 @@ struct AutomationPanel: View {
                 Text(policy == .ask ? "Wait for my response" : "Send y and Enter")
                     .font(.caption).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
-             .contentShape(RoundedRectangle(cornerRadius: 9))
-        }.buttonStyle(.plain).settingsSurface(selected: selected)
+             .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+        }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: selected)
          .accessibilityLabel(policy.title)
          .accessibilityAddTraits(selected ? .isSelected : [])
          .accessibilityRemoveTraits(selected ? [] : .isSelected)
@@ -644,7 +646,7 @@ private struct AutomationRun: View {
                 Text(active ? "Live terminal" : "Terminal output").font(.caption.weight(.medium))
                 Spacer()
                 Text((job.directory as NSString).abbreviatingWithTildeInPath)
-                    .font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    .font(TabTypography.path(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             AutomationConsole(outputURL: scheduler.logURL(job), offset: offset,
                               sizeURL: job.policy != nil ? scheduler.terminalSizeURL(job) : nil,

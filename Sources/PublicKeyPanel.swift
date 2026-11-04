@@ -47,7 +47,7 @@ private struct KeyMark: View {
                     context.fill(Path(roundedRect: rect, cornerRadius: cell * 0.14), with: .color(ink))
                 }
             }
-        }.background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: 9)).accessibilityHidden(true)
+        }.background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.tile)).accessibilityHidden(true)
     }
 }
 
@@ -224,7 +224,7 @@ private struct GenerateSSHKeySheet: View {
                 Image(systemName: "key.horizontal.fill")
                     .font(.system(size: 21, weight: .medium)).foregroundStyle(Color.accentColor)
                     .frame(width: 44, height: 44)
-                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.panel))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Create SSH key").font(.system(size: 21, weight: .semibold))
@@ -310,7 +310,7 @@ private struct GenerateSSHKeySheet: View {
                              .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
                                 bitCount == bits ? Color.accentColor.opacity(0.75) : Color.primary.opacity(0.06), lineWidth: 1))
                              .contentShape(RoundedRectangle(cornerRadius: 8))
-                        }.buttonStyle(.plain).accessibilityLabel("\(algorithm.label) \(bits) bits")
+                        }.buttonStyle(HoverButtonStyle(cornerRadius: 8)).accessibilityLabel("\(algorithm.label) \(bits) bits")
                          .accessibilityAddTraits(bitCount == bits ? .isSelected : [])
                     }
                 }
@@ -335,16 +335,16 @@ private struct GenerateSSHKeySheet: View {
             HStack(alignment: .top, spacing: 9) {
                 Image(systemName: "folder").foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(verbatim: location).font(.system(size: 12, design: .monospaced))
+                    Text(verbatim: location).font(TabTypography.path(size: 12))
                         .lineLimit(1).truncationMode(.middle).help(folder.path)
                     Text(verbatim: displayFilename + "  ·  " + displayFilename + ".pub")
-                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
+                        .font(TabTypography.path(size: 11)).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
                         .help("Private key: \(displayFilename)\nPublic key: \(displayFilename).pub")
                 }
                 Spacer(minLength: 0)
             }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
-             .background(Color(nsColor: .windowBackgroundColor).opacity(0.65), in: RoundedRectangle(cornerRadius: 7))
+             .background(Color(nsColor: .windowBackgroundColor).opacity(0.65), in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
         }
     }
 
@@ -376,8 +376,8 @@ private struct GenerateSSHKeySheet: View {
             content()
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: SurfaceRadius.panel))
+        .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.panel).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
         .accessibilityElement(children: .contain).accessibilityLabel(title)
     }
 
@@ -543,7 +543,7 @@ struct PublicKeyPanel: View {
                 } label: { Image(systemName: "pencil") }
                 .help("Edit alias").accessibilityLabel("Edit alias for " + name(key))
             }
-        }.buttonStyle(.plain).padding(8)
+        }.buttonStyle(HoverButtonStyle()).padding(8)
          .background(current?.id == key.id ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
     }
 

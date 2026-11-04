@@ -18,5 +18,7 @@ enum TabTypography {
         return .custom("SUITE-Bold", size: size, relativeTo: style)
     }
 
+    static func path(size: CGFloat) -> Font { Font(terminalFont(size: size)) }
+
     static let favoriteLabel = suite(size: NSFont.systemFontSize, relativeTo: .body)
 }
