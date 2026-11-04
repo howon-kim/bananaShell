@@ -19,6 +19,9 @@
 		81D00AF45D55EF0F79BA2B78 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821C9B4585A30278DCBF7F39 /* Recording.swift */; };
 		A5583199B15F9BFF8446FC29 /* SUITE-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = ADF7FCDB634B1DFBCCAC45F4 /* SUITE-Bold.otf */; };
 		A9B2E723B4A6B29819DAD5D1 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455628FE21F4768C4459036D /* main.swift */; };
+		4618318764A0115C2ADA79BF /* EditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C254BB454C5E746AE9F1B0 /* EditorSheet.swift */; };
+		EC098E101A1078DC0D5AB30A /* APIKeyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B518189677AFA0F950D119 /* APIKeyViews.swift */; };
+		EE267B0B4E83AF4FB79A349E /* APIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C775BAD170D3D10D19DEE0 /* APIKeyStore.swift */; };
 		AEC6C164DD8142CD6E0DC4D9 /* TabTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FCE98FE2F3CC84A404A932C /* TabTypography.swift */; };
 		B1E170904920609D2CAFD836 /* TerminalSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C96696E973D980EC2CA93DE /* TerminalSlots.swift */; };
 		B3E98AABB868491E61E16BC8 /* PromptSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38F64639269C038AD14090E7 /* PromptSettings.swift */; };
@@ -34,6 +37,9 @@
 		20A5C9ABB7B2A8700D91E607 /* ProgramLogos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ProgramLogos; path = Sources/ProgramLogos; sourceTree = SOURCE_ROOT; };
 		38F64639269C038AD14090E7 /* PromptSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptSettings.swift; sourceTree = "<group>"; };
 		455628FE21F4768C4459036D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		48B518189677AFA0F950D119 /* APIKeyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyViews.swift; sourceTree = "<group>"; };
+		58C775BAD170D3D10D19DEE0 /* APIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyStore.swift; sourceTree = "<group>"; };
+		67C254BB454C5E746AE9F1B0 /* EditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSheet.swift; sourceTree = "<group>"; };
 		4FCE98FE2F3CC84A404A932C /* TabTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabTypography.swift; sourceTree = "<group>"; };
 		5E171DAEB85D41EB5A23CEBA /* SUITE-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SUITE-LICENSE.txt"; sourceTree = "<group>"; };
 		6524AED0E9D606DF8BDE5EA5 /* ForegroundProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundProgram.swift; sourceTree = "<group>"; };
@@ -76,6 +82,9 @@
 				978032F271F33C53C1AE7338 /* PublicKeyPanel.swift */,
 				821C9B4585A30278DCBF7F39 /* Recording.swift */,
 				AE8ED11AD06251BB51237C85 /* Sidebars.swift */,
+				58C775BAD170D3D10D19DEE0 /* APIKeyStore.swift */,
+				48B518189677AFA0F950D119 /* APIKeyViews.swift */,
+				67C254BB454C5E746AE9F1B0 /* EditorSheet.swift */,
 				4FCE98FE2F3CC84A404A932C /* TabTypography.swift */,
 				7C96696E973D980EC2CA93DE /* TerminalSlots.swift */,
 			);
@@ -202,6 +211,9 @@
 				3A813B2A6C185EA49D9F7F52 /* PublicKeyPanel.swift in Sources */,
 				81D00AF45D55EF0F79BA2B78 /* Recording.swift in Sources */,
 				43E62FC64A1A74E7E89C68AB /* Sidebars.swift in Sources */,
+				EE267B0B4E83AF4FB79A349E /* APIKeyStore.swift in Sources */,
+				EC098E101A1078DC0D5AB30A /* APIKeyViews.swift in Sources */,
+				4618318764A0115C2ADA79BF /* EditorSheet.swift in Sources */,
 				AEC6C164DD8142CD6E0DC4D9 /* TabTypography.swift in Sources */,
 				B1E170904920609D2CAFD836 /* TerminalSlots.swift in Sources */,
 				A9B2E723B4A6B29819DAD5D1 /* main.swift in Sources */,

@@ -4,7 +4,7 @@ import Foundation
 
 enum ConfirmationPolicy: String, CaseIterable {
     case ask, auto
-    var title: String { self == .ask ? "Ask me" : "Automatically allow (y)" }
+    var title: String { self == .ask ? "Ask me" : "Automatically allow" }
 }
 
 struct ScheduledJob: Identifiable {
@@ -222,6 +222,52 @@ struct JobScheduler {
             throw error
         }
     }
+    // Replace the registered definition in place so its ID, output and replay history survive edits.
+    func update(_ job: ScheduledJob) throws {
+        var isDirectory: ObjCBool = false
+        guard job.directory.hasPrefix("/"), FileManager.default.fileExists(atPath: job.directory, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw Self.launchError("Choose an existing working directory.")
+        }
+        let url = file(job), original = try Data(contentsOf: url)
+        guard var plist = try PropertyListSerialization.propertyList(from: original, format: nil) as? [String: Any],
+              plist["Label"] as? String == job.label else { throw Self.launchError("Invalid automation definition.") }
+        plist["Comment"] = job.name
+        plist["WorkingDirectory"] = job.directory
+        plist["StartCalendarInterval"] = job.hourly ? ["Minute": job.minute] : ["Hour": job.hour, "Minute": job.minute]
+        var changes: [(URL, Data)] = []
+        if let tape = job.recording {
+            guard !tape.commands.isEmpty, job.policy != nil else { throw Self.launchError("Record a command first.") }
+            changes.append((replayURL(job), Data(tape.script(jobName: job.name).utf8)))
+            plist["bananaShellCommand"] = tape.summary
+        } else if let args = plist["ProgramArguments"] as? [String], args.count == 3 {
+            plist["ProgramArguments"] = [args[0], args[1], job.command]
+        }
+        if let policy = job.policy { changes.append((policyURL(job), Data(policy.rawValue.utf8))) }
+        changes.append((url, try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)))
+        let backups = try changes.map { (file, _) in
+            (file, FileManager.default.fileExists(atPath: file.path) ? try Data(contentsOf: file) : nil)
+        }
+        try control(["bootout", domain + "/" + job.label])
+        func write(_ data: Data, _ file: URL) throws {
+            try data.write(to: file, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        }
+        do {
+            for (file, data) in changes { try write(data, file) }
+            try control(["bootstrap", domain, url.path])
+        } catch {
+            let cause = error
+            do {
+                for (file, data) in backups {
+                    if let data { try write(data, file) }
+                    else if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
+                }
+                try control(["bootstrap", domain, url.path])
+            } catch { throw Self.launchError("Update failed: " + cause.localizedDescription + ". Could not restore the previous schedule: " + error.localizedDescription) }
+            throw cause
+        }
+    }
+
     func runNow(_ job: ScheduledJob) throws {
         try control(["kickstart", domain + "/" + job.label])
     }
@@ -277,6 +323,7 @@ struct AutomationPanel: View {
     @State private var showingDetail = false
     @State private var copied: String?
     @State private var adding = false
+    @State private var editing: ScheduledJob?
     @State private var removal: ScheduledJob?
     @State private var error: String?
 
@@ -377,6 +424,16 @@ struct AutomationPanel: View {
             adding = false
             reload()
         } }
+        .sheet(item: $editing) { existing in
+            JobEditor(existing: existing) { job in
+                guard !(try runningLabels()).contains(job.label) else {
+                    throw NSError(domain: "bananaShell.scheduler", code: 1, userInfo: [NSLocalizedDescriptionKey: "Stop the current run before saving changes."])
+                }
+                try scheduler.update(job)
+                query = ""; selection = job.id; editing = nil
+                reload()
+            }
+        }
         .alert("Delete this automation?", isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }), presenting: removal) { job in
             Button("Delete", role: .destructive) {
                 do { try scheduler.remove(job); reload() } catch { self.error = error.localizedDescription }
@@ -386,29 +443,26 @@ struct AutomationPanel: View {
     }
 
     private func sidebarRow(_ job: ScheduledJob) -> some View {
-        HStack(spacing: 6) {
-            Button { selection = job.id; showingDetail = true } label: {
-                HStack {
-                    mark(job, size: 34)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: job.name).lineLimit(1)
-                        HStack(spacing: 5) {
-                            if running.contains(job.label) {
-                                Circle().fill(waiting.contains(job.label) ? Color.orange : Color.green).frame(width: 5, height: 5)
-                            }
-                            Text(job.schedule).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
+        let active = running.contains(job.label)
+        return LibraryRow(selected: current?.id == job.id, select: { selection = job.id; showingDetail = true }) {
+            HStack {
+                mark(job, size: 34)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verbatim: job.name).lineLimit(1)
+                    HStack(spacing: 5) {
+                        if running.contains(job.label) {
+                            Circle().fill(waiting.contains(job.label) ? Color.orange : Color.green).frame(width: 5, height: 5)
                         }
+                        Text(job.schedule).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    Spacer(minLength: 0)
-                }.contentShape(Rectangle())
-            }.help(job.name + " · " + job.command)
-             .accessibilityAddTraits(current?.id == job.id ? .isSelected : [])
-            Button { toggleRun(job) } label: {
-                Image(systemName: running.contains(job.label) ? "stop.fill" : "play.fill").frame(width: 18, height: 24)
-            }.help(running.contains(job.label) ? "Stop current run" : "Run now")
-             .accessibilityLabel((running.contains(job.label) ? "Stop " : "Run ") + job.name)
-        }.buttonStyle(HoverButtonStyle()).padding(8)
-         .background(current?.id == job.id ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
+                }
+                Spacer(minLength: 0)
+            }
+            .help(job.name + " · " + job.command)
+        } action: {
+            PanelActionButton(symbol: active ? "stop.fill" : "play.fill", title: (active ? "Stop " : "Run ") + job.name,
+                              highlighted: active) { toggleRun(job) }
+        }
         .contextMenu {
             Button(running.contains(job.label) ? "Stop Current Run" : "Run Now") { toggleRun(job) }
             Divider()
@@ -438,15 +492,8 @@ struct AutomationPanel: View {
                         .font(.caption).foregroundStyle(waiting.contains(job.label) ? .orange : .green)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
-            Button { toggleRun(job) } label: {
-                Label(active ? "Stop" : "Run now", systemImage: active ? "stop.fill" : "play.fill")
-            }.buttonStyle(.borderedProminent)
-             .accessibilityLabel((active ? "Stop " : "Run ") + job.name)
-            Menu {
-                Button("Delete Automation…", role: .destructive) { removal = job }
-            } label: { Image(systemName: "ellipsis").frame(width: 20, height: 24) }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .help("Automation actions").accessibilityLabel("Automation actions")
+            AutomationHeaderActions(running: active, name: job.name,
+                                    toggle: { toggleRun(job) }, edit: { editing = job }, remove: { removal = job })
         }
         Divider()
         if active || (observedEnds[job.label] ?? 0) > offset {
@@ -483,16 +530,12 @@ struct AutomationPanel: View {
                 Text(verbatim: value).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Button {
+                PanelActionButton(symbol: copied == value ? "checkmark" : "doc.on.doc",
+                                  title: "Copy " + title, highlighted: copied == value) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(value, forType: .string)
                     copied = value
-                } label: {
-                    Image(systemName: copied == value ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 12)).foregroundStyle(copied == value ? SettingsStyle.accent : .secondary)
-                        .frame(width: 24, height: 22).contentShape(Rectangle())
-                }.buttonStyle(HoverButtonStyle())
-                    .help("Copy " + title).accessibilityLabel("Copy " + title)
+                }
             }.padding(16).settingsSurface()
         }.task(id: copied) {
             guard copied == value else { return }
@@ -501,26 +544,10 @@ struct AutomationPanel: View {
     }
 
     private func confirmationOption(_ policy: ConfirmationPolicy, selected: Bool, job: ScheduledJob) -> some View {
-        Button {
+        EditorChoice(policy: policy, selected: selected) {
             do { try scheduler.setPolicy(policy, for: job); reload() }
             catch { self.error = error.localizedDescription }
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: policy == .ask ? "bubble.left" : "checkmark.circle")
-                    Spacer(minLength: 0)
-                    if selected { Image(systemName: "checkmark.circle.fill") }
-                }.font(.system(size: 13)).foregroundStyle(selected ? SettingsStyle.accent : .secondary)
-                 .accessibilityHidden(true)
-                Text(policy.title).font(.system(size: 12, weight: .semibold)).lineLimit(2)
-                Text(policy == .ask ? "Wait for my response" : "Send y and Enter")
-                    .font(.caption).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
-             .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
-        }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: selected)
-         .accessibilityLabel(policy.title)
-         .accessibilityAddTraits(selected ? .isSelected : [])
-         .accessibilityRemoveTraits(selected ? [] : .isSelected)
+        }
     }
 
     private func emptyState(_ title: String, message: String, icon: String) -> some View {
@@ -563,69 +590,232 @@ private struct JobEditor: View {
     @State private var policy: ConfirmationPolicy = .ask
     @StateObject private var recorder = RecordingSession()
     @State private var hourly = false
-    @State private var hour = 9
-    @State private var minute = 0
+    @State private var hour: String
+    @State private var minute: String
     @State private var error: String?
+    let existing: ScheduledJob?
     let save: (ScheduledJob) throws -> Void
+    @State private var recording: Bool
+    @State private var directory: String
+    @State private var command: String
+
+    init(existing: ScheduledJob? = nil, save: @escaping (ScheduledJob) throws -> Void) {
+        self.existing = existing
+        self.save = save
+        _name = State(initialValue: existing?.name ?? "")
+        _policy = State(initialValue: existing?.policy ?? .ask)
+        _hour = State(initialValue: String(format: "%02d", existing?.hour ?? 9))
+        _minute = State(initialValue: String(format: "%02d", existing?.minute ?? 0))
+        _hourly = State(initialValue: existing?.hourly ?? false)
+        _directory = State(initialValue: existing?.directory ?? "")
+        _command = State(initialValue: existing?.command ?? "")
+        _recording = State(initialValue: existing == nil)
+    }
+
+    private var canSave: Bool {
+        (hourly || ScheduleNumber.parse(hour, in: 0...23) != nil) && ScheduleNumber.parse(minute, in: 0...59) != nil &&
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        (recording ? recorder.finished && recorder.count > 0 && recorder.error == nil
+                   : !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Add Automation").font(.title2.bold())
-            if !recorder.finished {
-                Text("● Recording · Run your commands in this terminal.").foregroundStyle(.orange)
-                Text("Commands and follow-up keystrokes are recorded. Do not enter passwords or tokens. Type exit at the shell prompt when finished.").font(.callout)
-                RecordingConsole(session: recorder).frame(height: 300)
-                if let prompt = recorder.prompt {
-                    HStack {
-                        Text(verbatim: prompt.question).font(.callout).textSelection(.enabled)
-                        Spacer()
-                        ForEach(Array(prompt.options.enumerated()), id: \.offset) { _, token in
-                            Button(InputTape.Prompt.label(token)) { recorder.choose(token) }
-                                .fontWeight(prompt.preferred == token ? .bold : .regular)
+        EditorSheet(icon: "clock.arrow.circlepath",
+                    title: existing == nil ? "Add Automation" : "Edit Automation",
+                    subtitle: "Choose what runs on this Mac and when.",
+                    message: recorder.error ?? error) {
+            if recording && !recorder.finished {
+                editorSection("01", "Record commands") { liveRecording }
+            } else {
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(spacing: 12) {
+                        editorSection("01", "Details") {
+                            editorField("Name") { TextField("Automation name", text: $name) }
+                        }
+                        editorSection("02", "Schedule") { scheduleFields }
+                    }.frame(width: 268)
+                    VStack(spacing: 12) {
+                        editorSection("03", recording || existing?.policy != nil ? "Recording" : "Command") {
+                            commandFields
+                        }
+                        if recording || existing?.policy != nil {
+                            editorSection("04", "Confirmation prompts") {
+                                HStack(spacing: 8) {
+                                    ForEach(ConfirmationPolicy.allCases, id: \.self) { option in
+                                        EditorChoice(policy: option, selected: policy == option) { policy = option }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            } else {
-                Text("Recording complete · Commands: \(recorder.tape.commands.count)").foregroundStyle(.secondary)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(recorder.tape.commands.indices, id: \.self) { i in
-                            let cmd = recorder.tape.commands[i]
-                            Text(verbatim: cmd.text).font(.body.monospaced())
-                            ForEach(cmd.replies.indices, id: \.self) { j in
-                                let r = cmd.replies[j]
-                                Text(verbatim: "  " + String(decoding: r.before, as: UTF8.self) + " → " + String(reflecting: String(decoding: r.keys, as: UTF8.self)) + " → " + String(decoding: r.after, as: UTF8.self)).font(.caption.monospaced())
-                            }
-                        }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                }.frame(maxHeight: 160)
             }
-            if let message = recorder.error { Text(message).foregroundStyle(.red) }
-            if recorder.finished {
-            LabeledContent("Name") { TextField("Automation name", text: $name) }
-
-            HStack {
-                Picker("Schedule", selection: $hourly) { Text("Daily").tag(false); Text("Hourly").tag(true) }.fixedSize()
-                if !hourly { Stepper("Hour: \(hour)", value: $hour, in: 0...23).fixedSize() }
-                Stepper("Minute: \(minute)", value: $minute, in: 0...59).fixedSize()
-            }
-            Picker("Confirmation prompts", selection: $policy) {
-                ForEach(ConfirmationPolicy.allCases, id: \.self) { Text($0.title).tag($0) }
-            }.pickerStyle(.segmented)
-            Text("Uses your Mac’s local time. Jobs run in zsh while you’re logged in, even when the app is closed.").font(.caption).foregroundStyle(.secondary)
-            }
-            if let error { Text(error).foregroundStyle(.red) }
-            HStack { Spacer(); Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                if recorder.finished { Button("Save and Schedule") {
-                    do { try save(ScheduledJob(id: UUID(), name: name.trimmingCharacters(in: .whitespacesAndNewlines), command: "Terminal recording",
-                        directory: recorder.directory, hour: hour, minute: minute, hourly: hourly, recording: recorder.tape, policy: policy)) }
-                    catch { self.error = error.localizedDescription }
-                }.keyboardShortcut(.defaultAction).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || recorder.count == 0 || recorder.error != nil) }
-            }
-        }.padding(20).frame(width: 640)
+        } actions: {
+            Spacer()
+            Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+            Button(existing == nil ? "Save and Schedule" : "Save changes", action: submit)
+                .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(!canSave)
+        }
         .onChange(of: recorder.finished) { finished in
             if finished && name.isEmpty { name = recorder.tape.suggestedName }
         }
         .onDisappear { recorder.stop() }
+    }
+
+    private var scheduleFields: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                EditorChoice("Daily", symbol: "calendar", selected: !hourly) { hourly = false }
+                EditorChoice("Hourly", symbol: "clock", selected: hourly) { hourly = true }
+            }
+            VStack(spacing: 0) {
+                if !hourly {
+                    ScheduleNumber(title: "Hour", value: $hour, range: 0...23)
+                    Divider().padding(.horizontal, 10)
+                }
+                ScheduleNumber(title: "Minute", value: $minute, range: 0...59)
+            }.settingsSurface()
+            Text("Uses your Mac’s local time. Runs while you’re logged in, even when bananaShell is closed.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder private var commandFields: some View {
+        if recording {
+            Text("Recorded commands: \(recorder.tape.commands.count)").font(.callout).foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(recorder.tape.commands.indices, id: \.self) { i in
+                        let cmd = recorder.tape.commands[i]
+                        Text(verbatim: cmd.text).font(.body.monospaced())
+                        ForEach(cmd.replies.indices, id: \.self) { j in
+                            let r = cmd.replies[j]
+                            Text(verbatim: "  " + String(decoding: r.before, as: UTF8.self) + " → " + String(reflecting: String(decoding: r.keys, as: UTF8.self)) + " → " + String(decoding: r.after, as: UTF8.self)).font(.caption.monospaced())
+                        }
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }.frame(maxHeight: 160)
+        } else if existing?.policy != nil {
+            Text(verbatim: command).font(.system(size: 12, design: .monospaced))
+                .lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
+            Button { recording = true } label: {
+                Label("Replace recording…", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.callout.weight(.medium))
+                    .padding(.horizontal, 12).frame(height: 30)
+            }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface()
+        } else {
+            editorField("Shell command") { TextField("Command", text: $command).font(.body.monospaced()) }
+        }
+        editorField("Working directory") {
+            if recording {
+                Text(verbatim: recorder.directory).font(TabTypography.path(size: 12))
+            } else {
+                TextField("Absolute path", text: $directory).font(TabTypography.path(size: 12))
+            }
+        }
+    }
+
+    @ViewBuilder private var liveRecording: some View {
+        Text("● Recording · Run your commands in this terminal.").foregroundStyle(.orange)
+        Text("Commands and follow-up keystrokes are recorded. Do not enter passwords or tokens. Type exit at the shell prompt when finished.").font(.callout)
+        RecordingConsole(session: recorder).frame(height: 300)
+        if let prompt = recorder.prompt {
+            HStack {
+                Text(verbatim: prompt.question).font(.callout).textSelection(.enabled)
+                Spacer()
+                ForEach(Array(prompt.options.enumerated()), id: \.offset) { _, token in
+                    Button(InputTape.Prompt.label(token)) { recorder.choose(token) }
+                        .fontWeight(prompt.preferred == token ? .bold : .regular)
+                }
+            }
+        }
+    }
+
+    private func submit() {
+        guard canSave, let minute = ScheduleNumber.parse(minute, in: 0...59) else { return }
+        do {
+            try save(ScheduledJob(id: existing?.id ?? UUID(), name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                command: recording ? recorder.tape.summary : command,
+                directory: recording ? recorder.directory : (directory as NSString).expandingTildeInPath,
+                hour: ScheduleNumber.parse(hour, in: 0...23) ?? 0, minute: minute, hourly: hourly, recording: recording ? recorder.tape : nil,
+                policy: recording || existing?.policy != nil ? policy : nil))
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct EditorChoice: View {
+    let title: String
+    let symbol: String
+    let selected: Bool
+    let choose: () -> Void
+
+    init(_ title: String, symbol: String, selected: Bool, choose: @escaping () -> Void) {
+        self.title = title; self.symbol = symbol
+        self.selected = selected; self.choose = choose
+    }
+
+    init(policy: ConfirmationPolicy, selected: Bool, choose: @escaping () -> Void) {
+        self.init(policy.title, symbol: policy == .ask ? "bubble.left" : "checkmark.circle",
+                  selected: selected, choose: choose)
+    }
+
+    var body: some View {
+        Button(action: choose) {
+            HStack(spacing: 7) {
+                Image(systemName: symbol)
+                    .foregroundStyle(selected ? Color.accentColor : .secondary)
+                    .accessibilityHidden(true)
+                Text(title).font(.system(size: 12, weight: .semibold))
+            }.frame(maxWidth: .infinity, minHeight: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile))
+        .settingsSurface(selected: selected)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct ScheduleNumber: View {
+    let title: String
+    @Binding var value: String
+    let range: ClosedRange<Int>
+    @FocusState private var focused: Bool
+
+    static func parse(_ text: String, in range: ClosedRange<Int>) -> Int? {
+        guard (1...2).contains(text.count), text.utf8.allSatisfy({ (48...57).contains($0) }),
+              let number = Int(text), range.contains(number) else { return nil }
+        return number
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title).font(.callout)
+            Spacer()
+            if Self.parse(value, in: range) == nil {
+                Text("\(range.lowerBound)–\(range.upperBound)").font(.caption2).foregroundStyle(.orange)
+            }
+            step(-1)
+            TextField("00", text: $value)
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
+                .textFieldStyle(.roundedBorder).multilineTextAlignment(.center)
+                .frame(width: 38).focused($focused)
+                .accessibilityLabel(title)
+                .onChange(of: focused) { editing in
+                    if !editing, let n = Self.parse(value, in: range) { value = String(format: "%02d", n) }
+                }
+            step(1)
+        }.padding(.horizontal, 10).padding(.vertical, 5)
+    }
+
+    private func step(_ delta: Int) -> some View {
+        let next = (Self.parse(value, in: range) ?? range.lowerBound) + delta
+        let enabled = range.contains(next)
+        return Button { value = String(format: "%02d", next) } label: {
+            Image(systemName: delta > 0 ? "plus" : "minus")
+                .font(.system(size: 10, weight: .semibold)).frame(width: 24, height: 24)
+        }.buttonStyle(HoverButtonStyle()).disabled(!enabled).opacity(enabled ? 1 : 0.35)
+            .accessibilityLabel((delta > 0 ? "Increase " : "Decrease ") + title.lowercased())
     }
 }
 
@@ -770,5 +960,42 @@ final class AutomationNotifications: NSObject, UNUserNotificationCenterDelegate 
               question.options.indices.contains(index) else { return }
         do { try scheduler.respond(question.options[index], to: question, for: job) }
         catch { NSLog("Automation response: %@", error.localizedDescription) }
+    }
+}
+
+private struct AutomationHeaderActions: View {
+    let running: Bool
+    let name: String
+    let toggle: () -> Void
+    let edit: () -> Void
+    let remove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(action: toggle) {
+                HStack(spacing: 6) {
+                    Image(systemName: running ? "stop.fill" : "play.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text(running ? "Stop" : "Run now").font(.callout.weight(.semibold))
+                }
+                .foregroundStyle(running ? Color.primary : Color.accentColor)
+                .frame(width: 88, height: 30)
+                .background((running ? Color.primary : Color.accentColor).opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
+            }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tab))
+                .accessibilityLabel((running ? "Stop " : "Run ") + name)
+            Menu {
+                Button("Edit Automation…", action: edit)
+                Divider()
+                Button("Delete Automation…", role: .destructive, action: remove)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 30, height: 30)
+                    .background(Color.primary.opacity(0.065), in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
+            }.menuStyle(.button).menuIndicator(.hidden)
+                .buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tab))
+                .help("Automation actions").accessibilityLabel("Automation actions")
+        }.fixedSize()
     }
 }

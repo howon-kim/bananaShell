@@ -178,6 +178,7 @@ final class WorkspaceState: ObservableObject {
     let addAutomation = PassthroughSubject<Void, Never>()
     let generateKey = PassthroughSubject<Void, Never>()
     let importKey = PassthroughSubject<Void, Never>()
+    let addAPIKey = PassthroughSubject<Void, Never>()
     let focusActivityTerminal = PassthroughSubject<Int, Never>()
     @Published var activityBoards = ActivityBoards()
     @Published var activityTerminal: Int?
@@ -224,7 +225,7 @@ private struct ShellTabFramesKey: PreferenceKey {
     }
 }
 
-private let sessionAccent = Color(red: 0.46, green: 0.87, blue: 0.76)
+private let sessionAccent = Color.accentColor
 
 enum WorkspaceTabMetrics {
     static let height: CGFloat = 26
@@ -254,7 +255,7 @@ struct FavoriteTabs: View {
     let select: (WorkspaceTab) -> Void
     private let badgeRadius = SurfaceRadius.tile
 
-    private func tabBadge(_ icon: String, title: String?) -> some View {
+    private func tabBadge(_ icon: String, title: String?, selected: Bool) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
             if let title { Text(verbatim: title).font(TabTypography.favoriteLabel).lineLimit(1) }
@@ -264,11 +265,11 @@ struct FavoriteTabs: View {
         .frame(height: WorkspaceTabMetrics.height)
         .fixedSize(horizontal: true, vertical: false)
         .contentShape(Rectangle())
-        .tabFace(selected: title != nil, cornerRadius: badgeRadius)
+        .tabFace(selected: selected, cornerRadius: badgeRadius)
     }
     private func favorite(_ tab: WorkspaceTab, _ icon: String, _ label: String) -> some View {
         Button { select(tab) } label: {
-            tabBadge(icon, title: state.selected == tab ? label : nil)
+            tabBadge(icon, title: tab == .settings && state.selected == tab ? label : nil, selected: state.selected == tab)
         }.buttonStyle(HoverButtonStyle(cornerRadius: badgeRadius))
          .help(label).accessibilityLabel(label)
          .accessibilityAddTraits(state.selected == tab ? .isSelected : [])
@@ -315,7 +316,7 @@ struct FavoriteTabs: View {
 
     private var primaryRow: some View {
         HStack(spacing: 5) {
-            favorite(.keys, "key", "SSH Keys")
+            favorite(.keys, "key", "Keys")
             favorite(.automations, "clock.arrow.circlepath", "Automations").padding(.trailing, 5)
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -360,11 +361,13 @@ struct FavoriteTabs: View {
             }
             if state.selected == .keys {
                 Menu {
-                    Button("Generate New Key…") { state.generateKey.send() }
-                    Button("Import Public Key…") { state.importKey.send() }
+                    Button("Generate SSH Key…") { state.generateKey.send() }
+                    Button("Import SSH Public Key…") { state.importKey.send() }
+                    Divider()
+                    Button("Add API Key…") { state.addAPIKey.send() }
                 } label: { Image(systemName: "plus").frame(width: 30, height: WorkspaceTabMetrics.height) }
                     .menuIndicator(.hidden).menuStyle(.borderlessButton).fixedSize().modifier(ControlHover())
-                    .help("Add SSH key").accessibilityLabel("Add SSH key")
+                    .help("Add SSH or API key").accessibilityLabel("Add key")
             } else {
                 let automation = state.selected == .automations
                 Button { if automation { state.addAutomation.send() } else { state.activityBoards.add(); showBoard(state.activityBoards.selected) } } label: {
@@ -490,6 +493,7 @@ private struct RenameBoardSheet: View {
 }
 
 private struct TerminalTabStrip: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var navigationKeys = NavigationKeys.shared
     private enum Anchor: Hashable { case page(group: Int, index: Int), terminal(Int) }
 
@@ -539,8 +543,9 @@ private struct TerminalTabStrip: View {
     }
     @State private var pendingClosure: PageClosure?
 
-    private func pageTab(_ page: Int, board: ActivityBoard) -> some View {
+    private func pageTab(_ page: Int, board: ActivityBoard, terminalCount: Int, expanded: Bool) -> some View {
         let active = page == board.page
+        let countLabel = "\(terminalCount) " + (terminalCount == 1 ? "terminal" : "terminals")
         let item = Anchor.page(group: board.id, index: page)
         return HStack(spacing: 0) {
             Button {
@@ -550,6 +555,12 @@ private struct TerminalTabStrip: View {
                     Capsule().fill(active ? sessionAccent : Color.secondary.opacity(0.55))
                         .frame(width: 3, height: active ? 14 : 8)
                     Text("Page \(page + 1)").font(TabTypography.favoriteLabel).monospacedDigit()
+                    if !active {
+                        Text(verbatim: String(terminalCount))
+                            .font(TabTypography.suite(size: 10, relativeTo: .caption2)).monospacedDigit()
+                            .padding(.horizontal, 4).frame(minWidth: 16, minHeight: 16)
+                            .background(Color.primary.opacity(0.10), in: Capsule())
+                    }
                     if let shortcut = GridTabKind.page.shortcut(at: page) {
                         TabShortcutLabel(keys: shortcut)
                     }
@@ -560,8 +571,9 @@ private struct TerminalTabStrip: View {
             }
             .buttonStyle(.plain)
             .focused($focus, equals: .title(item))
-            .help("Page \(page + 1) of \(board.pageCount)" + GridTabKind.page.hint(at: page))
+            .help("Page \(page + 1) of \(board.pageCount) · " + countLabel + GridTabKind.page.hint(at: page))
             .accessibilityLabel("Page \(page + 1) of \(board.pageCount)")
+            .accessibilityValue(countLabel)
             .accessibilityAddTraits(active ? .isSelected : [])
 
             Button {
@@ -579,7 +591,7 @@ private struct TerminalTabStrip: View {
         .contentShape(Rectangle())
         .onHover { track(item, inside: $0) }
         .overlay(alignment: .trailing) {
-            Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1, height: 16)
+            if expanded { Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1, height: 16).allowsHitTesting(false) }
         }
     }
 
@@ -645,24 +657,32 @@ private struct TerminalTabStrip: View {
                     ForEach(0..<board.pageCount, id: \.self) { page in
                         let grouped = showsPageGroups
                         let group = Anchor.page(group: board.id, index: page)
+                        let slots = board.slots(on: page)
+                        let draggingFromPage = draggedTab.flatMap { id in state.tabs.first { $0.id == id } }
+                            .map { slots.contains($0.shortcutSlot) } ?? false
+                        let expanded = !grouped || page == board.page || hoveredPageGroup == group || draggingFromPage
                         HStack(spacing: 0) {
                             if grouped {
-                                pageTab(page, board: board)
-                                    .id(Anchor.page(group: board.id, index: page))
+                                pageTab(page, board: board, terminalCount: slots.count, expanded: expanded).id(group)
                             }
-                            HStack(spacing: 4) {
-                                ForEach(board.slots(on: page), id: \.self) { slot in
-                                    if let tab = state.tabs.first(where: { $0.shortcutSlot == slot }) { terminalTab(tab) }
+                            if expanded {
+                                HStack(spacing: 4) {
+                                    ForEach(slots, id: \.self) { slot in
+                                        if let tab = state.tabs.first(where: { $0.shortcutSlot == slot }) { terminalTab(tab) }
+                                    }
                                 }
+                                .padding(.leading, grouped ? 8 : 0)
+                                .transition(.offset(x: -6).combined(with: .opacity))
                             }
-                            .padding(.leading, grouped ? 8 : 0)
                         }
                         .background(grouped && hoveredPageGroup == group ? sessionAccent.opacity(0.09) : .clear,
                                     in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
                         .contentShape(Rectangle())
                         .onHover { inside in
-                            if inside && grouped { hoveredPageGroup = group }
-                            else if hoveredPageGroup == group { hoveredPageGroup = nil }
+                            guard grouped, inside ? hoveredPageGroup != group : hoveredPageGroup == group else { return }
+                            withAnimation(reduceMotion || draggedTab != nil ? nil : .easeOut(duration: inside ? 0.14 : 0.10)) {
+                                hoveredPageGroup = inside ? group : nil
+                            }
                         }
 
                     }
@@ -751,7 +771,7 @@ struct ActivityPanel: View {
             }
             Spacer(minLength: 0)
             if width >= 245 && (!usage.isEmpty || (width >= 390 && !tab.status.isEmpty)) {
-                Text(usage.isEmpty ? tab.status : usage).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(usage.isEmpty ? tab.status : usage).font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize, relativeTo: .caption)).foregroundStyle(.secondary).lineLimit(1)
             }
             if width >= 150, ShellTabShortcuts.keys.indices.contains(tab.shortcutSlot) {
                 TabShortcutLabel(keys: navigationKeys.modifier(.terminal).symbol + ShellTabShortcuts.keys[tab.shortcutSlot])
@@ -953,5 +973,62 @@ struct HoverButtonStyle: ButtonStyle {
         configuration.label
             .modifier(ControlHover(cornerRadius: cornerRadius))
             .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+// One selection target across the row, with a separate trailing action above it.
+struct LibraryRow<Label: View, Action: View>: View {
+    let selected: Bool
+    let select: () -> Void
+    @ViewBuilder let label: () -> Label
+    @ViewBuilder let action: () -> Action
+
+    var body: some View {
+        Button(action: select) {
+            label()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 8).padding(.trailing, 44).padding(.vertical, 8)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .overlay(alignment: .trailing) { action().padding(.trailing, 8) }
+        .modifier(LibraryRowSurface(selected: selected))
+    }
+}
+
+struct LibraryRowSurface: ViewModifier {
+    let selected: Bool
+    @State private var hovered = false
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: SurfaceRadius.tile, style: .continuous)
+                    .fill(selected ? Color.accentColor.opacity(hovered ? 0.25 : 0.18)
+                                   : Color.primary.opacity(hovered ? 0.075 : 0))
+            }
+            .contentShape(Rectangle())
+            .onHover { hovered = $0 }
+    }
+}
+
+struct PanelActionButton: View {
+    let symbol: String
+    let title: String
+    var highlighted = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(highlighted ? Color.accentColor : .secondary)
+                .frame(width: 28, height: 28)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: SurfaceRadius.control))
+        }
+        .buttonStyle(HoverButtonStyle())
+        .accessibilityLabel(title)
+        .help(title)
     }
 }

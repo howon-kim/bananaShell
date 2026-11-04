@@ -8,6 +8,7 @@ import Darwin
 struct PublicIdentity: Identifiable {
     let url: URL
     let algorithm: String
+    let addedAt: Date?
     let publicLine: String
     let digest: [UInt8]
     var id: URL { url }
@@ -15,7 +16,7 @@ struct PublicIdentity: Identifiable {
     var filename: String { url.lastPathComponent }
 
     init(_ url: URL) throws {
-        let meta = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        let meta = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .addedToDirectoryDateKey, .creationDateKey])
         let invalid = NSError(domain: "bananaShell.keys", code: 1, userInfo: [NSLocalizedDescriptionKey: "Choose a single OpenSSH public key (.pub)."])
         guard url.pathExtension.lowercased() == "pub", meta.isRegularFile == true, meta.isSymbolicLink != true,
               (meta.fileSize ?? Int.max) < 512 * 1024 else { throw invalid }
@@ -27,6 +28,7 @@ struct PublicIdentity: Identifiable {
         let size = blob.prefix(4).reduce(0) { $0 * 256 + Int($1) }
         guard size == parts[0].utf8.count, blob.count > size + 4,
               blob.dropFirst(4).prefix(size).elementsEqual(parts[0].utf8) else { throw invalid }
+        addedAt = meta.addedToDirectoryDate ?? meta.creationDate
         self.url = url
         let type = String(parts[0])
         algorithm = (type.hasPrefix("ssh-") ? String(type.dropFirst(4)) : type).uppercased()
@@ -35,19 +37,104 @@ struct PublicIdentity: Identifiable {
     }
 }
 
-private struct KeyMark: View {
-    let key: PublicIdentity
+struct KeyMark: View {
+    let digest: [UInt8]
+    init(key: PublicIdentity) { digest = key.digest }
+    init(recordID: UUID) { digest = Array(SHA256.hash(data: Data(recordID.uuidString.utf8))) }
     var body: some View {
-        let ink = Color(hue: Double(key.digest[15]) / 255, saturation: 0.46, brightness: 0.9)
+        let ink = Color(hue: Double(digest[15]) / 255, saturation: 0.46, brightness: 0.9)
         Canvas { context, size in
             let cell = min(size.width, size.height) / 7
             for row in 0..<5 {
-                for col in 0..<5 where key.digest[row * 3 + min(col, 4-col)] & 1 == 1 {
+                for col in 0..<5 where digest[row * 3 + min(col, 4-col)] & 1 == 1 {
                     let rect = CGRect(x: CGFloat(col + 1) * cell, y: CGFloat(row + 1) * cell, width: cell, height: cell)
                     context.fill(Path(roundedRect: rect, cornerRadius: cell * 0.14), with: .color(ink))
                 }
             }
         }.background(ink.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.tile)).accessibilityHidden(true)
+    }
+}
+
+// App-local access history: persist a timestamp, never key material.
+struct KeyDates: View {
+    let added: Date?
+    @AppStorage private var accessed: Double
+
+    init(added: Date?, historyID: String) {
+        self.added = added
+        _accessed = AppStorage(wrappedValue: 0, Self.storageKey(historyID))
+    }
+    static func storageKey(_ id: String) -> String { "keyAccess." + id }
+    static func accessed(_ id: String) {
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: storageKey(id))
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Added: " + (added?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown"))
+            Text("Last accessed: " + (accessed > 0 ? Date(timeIntervalSince1970: accessed).formatted(date: .abbreviated, time: .shortened) : "Not recorded"))
+                .help("Last access in bananaShell")
+        }.font(.caption).foregroundStyle(.secondary)
+    }
+}
+
+struct KeyDetailHeader: View {
+    let mark: KeyMark
+    let title: String
+    let subtitle: String
+    let added: Date?
+    let historyID: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            mark.frame(width: 56, height: 56)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: title).font(.title2.bold())
+                Text(verbatim: subtitle).font(.caption.monospaced()).foregroundStyle(.secondary)
+                KeyDates(added: added, historyID: historyID).id(historyID).padding(.top, 3)
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct KeyValueCard<Actions: View>: View {
+    let value: String
+    var secret = false
+    @ViewBuilder let actions: () -> Actions
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Group {
+                if secret {
+                    Text(verbatim: value).lineLimit(3, reservesSpace: true).truncationMode(.middle)
+                } else {
+                    Text(verbatim: value)
+                }
+            }
+                .font(.system(size: 12, design: .monospaced))
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled).privacySensitive(secret)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            actions()
+        }.padding(16).settingsSurface()
+    }
+}
+
+struct KeyDestinationLabel: View {
+    let symbol: String
+    let title: String
+    let subtitle: String
+    var path = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol).foregroundStyle(Color.accentColor)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: title).font(.callout.weight(.medium))
+                Text(verbatim: subtitle).font(path ? TabTypography.path(size: 11) : .caption).foregroundStyle(.secondary)
+                    .lineLimit(2).truncationMode(.middle)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary)
+        }.padding(16).contentShape(Rectangle())
     }
 }
 
@@ -219,61 +306,35 @@ private struct GenerateSSHKeySheet: View {
     private var location: String { (folder.path as NSString).abbreviatingWithTildeInPath }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 14) {
-                Image(systemName: "key.horizontal.fill")
-                    .font(.system(size: 21, weight: .medium)).foregroundStyle(Color.accentColor)
-                    .frame(width: 44, height: 44)
-                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.panel))
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Create SSH key").font(.system(size: 21, weight: .semibold))
-                    Text("Add a new key pair to this Mac.").font(.callout).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }.padding(.horizontal, 24).padding(.vertical, 18)
-            Divider()
-            ScrollView(showsIndicators: false) {
-                HStack(alignment: .top, spacing: 14) {
-                    VStack(spacing: 12) {
-                        section("01", "Key type") {
-                            Picker("Key type", selection: Binding(get: { algorithm }, set: selectAlgorithm)) {
-                                ForEach(SSHKeyAlgorithm.allCases) { type in Text(type.label).tag(type) }
-                            }.pickerStyle(.segmented).labelsHidden()
-                        }
-                        section("02", "Key length") { keyLengthSection }
-                    }.frame(width: 268)
-                    VStack(spacing: 12) {
-                        section("03", "Key files") { fileSection }
-                        section("04", "Passphrase", optional: true) { protectionSection }
+        EditorSheet(icon: "key.horizontal.fill", title: "Create SSH key",
+                    subtitle: "Add a new key pair to this Mac.", message: errorMessage) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(spacing: 12) {
+                    editorSection("01", "Key type") {
+                        Picker("Key type", selection: Binding(get: { algorithm }, set: selectAlgorithm)) {
+                            ForEach(SSHKeyAlgorithm.allCases) { type in Text(type.label).tag(type) }
+                        }.pickerStyle(.segmented).labelsHidden()
                     }
-                }.padding(24).disabled(generating)
-            }.frame(height: 460)
-            if !errorMessage.isEmpty {
-                HStack(alignment: .top, spacing: 9) {
-                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red).accessibilityHidden(true)
-                    Text(errorMessage).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                 .background(Color.red.opacity(0.09), in: RoundedRectangle(cornerRadius: 8))
-                 .padding(.horizontal, 24).padding(.bottom, 16)
-            }
-            Divider()
-            HStack(spacing: 10) {
-                if generating {
-                    ProgressView().controlSize(.small)
-                    Text("Creating \(algorithm.label) key…").font(.callout).foregroundStyle(.secondary)
+                    editorSection("02", "Key length") { keyLengthSection }
+                }.frame(width: 268)
+                VStack(spacing: 12) {
+                    editorSection("03", "Key files") { fileSection }
+                    editorSection("04", "Passphrase", optional: true) { protectionSection }
                 }
-                Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                    .controlSize(.large).disabled(generating)
-                Button("Create Key", action: generate).buttonStyle(.borderedProminent)
-                    .controlSize(.large).keyboardShortcut(.defaultAction)
-                    .disabled(generating || filename.isEmpty)
-            }.padding(.horizontal, 24).padding(.vertical, 16)
-             .background(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-        }.frame(width: 780).background(Color(nsColor: .windowBackgroundColor))
-         .interactiveDismissDisabled(generating)
+            }.disabled(generating)
+        } actions: {
+            if generating {
+                ProgressView().controlSize(.small)
+                Text("Creating \(algorithm.label) key…").font(.callout).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                .controlSize(.large).disabled(generating)
+            Button("Create Key", action: generate).buttonStyle(.borderedProminent)
+                .controlSize(.large).keyboardShortcut(.defaultAction)
+                .disabled(generating || filename.isEmpty)
+        }
+        .interactiveDismissDisabled(generating)
          .onAppear {
              suggestedFilename = SSHKeyGenerator.suggestedName(in: folder, algorithm: algorithm)
              filename = suggestedFilename
@@ -323,11 +384,11 @@ private struct GenerateSSHKeySheet: View {
     private var fileSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                field("File name") {
+                editorField("File name") {
                     TextField(algorithm.filename, text: $filename).font(.system(size: 13, design: .monospaced))
                         .accessibilityLabel("File name").focused($focusedField, equals: .filename)
                 }
-                field("Comment", optional: true) {
+                editorField("Comment", optional: true) {
                     TextField("e.g. Work Mac", text: $comment)
                         .accessibilityLabel("Comment (optional)").focused($focusedField, equals: .comment)
                 }
@@ -350,45 +411,17 @@ private struct GenerateSSHKeySheet: View {
 
     private var protectionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            field("Passphrase") {
+            editorField("Passphrase") {
                 SecureField("Enter passphrase", text: $passphrase)
                     .accessibilityLabel("Passphrase").focused($focusedField, equals: .passphrase)
             }
-            field("Confirm passphrase") {
+            editorField("Confirm passphrase") {
                 SecureField("Re-enter passphrase", text: $confirmation)
                     .accessibilityLabel("Confirm passphrase").focused($focusedField, equals: .confirmation)
             }
             Text("Protects the private key file. Leave empty to save without a passphrase.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    private func section<Content: View>(_ number: String, _ title: String, optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text(number).font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.accentColor).frame(width: 24, height: 22)
-                    .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 5))
-                Text(title).font(.system(size: 13, weight: .semibold))
-                Spacer(minLength: 0)
-                if optional { Text("Optional").font(.caption).foregroundStyle(.secondary) }
-            }
-            content()
-        }
-        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: SurfaceRadius.panel))
-        .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.panel).strokeBorder(Color.primary.opacity(0.08), lineWidth: 1))
-        .accessibilityElement(children: .contain).accessibilityLabel(title)
-    }
-
-    private func field<Content: View>(_ title: String, optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
-                Text(title).font(.system(size: 12, weight: .medium))
-                if optional { Text("Optional").font(.system(size: 11)).foregroundStyle(.secondary) }
-            }
-            content().textFieldStyle(.roundedBorder).controlSize(.large)
-        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func selectAlgorithm(_ next: SSHKeyAlgorithm) {
@@ -427,34 +460,76 @@ private struct GenerateSSHKeySheet: View {
 }
 
 struct PublicKeyPanel: View {
+    private enum Selection: Hashable { case ssh(URL), api(UUID) }
+    private enum Editor: Identifiable {
+        case ssh, api(APIKeyRecord?)
+        var id: String {
+            switch self { case .ssh: return "ssh"; case .api(let key): return "api:" + (key?.id.uuidString ?? "new") }
+        }
+    }
     let generateRequest: PassthroughSubject<Void, Never>
     let importRequest: PassthroughSubject<Void, Never>
+    let apiKeyRequest: PassthroughSubject<Void, Never>
     let folder: URL
+    let apiKeyStore: APIKeyStore
     init(folder: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh"),
-         generateRequest: PassthroughSubject<Void, Never> = .init(), importRequest: PassthroughSubject<Void, Never> = .init()) {
+         generateRequest: PassthroughSubject<Void, Never> = .init(), importRequest: PassthroughSubject<Void, Never> = .init(),
+         apiKeyRequest: PassthroughSubject<Void, Never> = .init(), apiKeyStore: APIKeyStore = .init()) {
         self.folder = folder
         self.generateRequest = generateRequest
         self.importRequest = importRequest
+        self.apiKeyRequest = apiKeyRequest
+        self.apiKeyStore = apiKeyStore
     }
     @State private var keys: [PublicIdentity] = []
+    @State private var apiKeys: [APIKeyRecord] = []
+    @State private var apiLoading = false
+    @State private var apiRevision = 0
+    @State private var apiRefresh: Task<Void, Never>?
+    @State private var apiNotice = ""
+    @State private var removingAPIKey: APIKeyRecord?
     @State private var aliases = UserDefaults.standard.dictionary(forKey: "publicKeyAliases") as? [String: String] ?? [:]
     @State private var query = ""
-    @State private var selection: URL?
+    @State private var selection: Selection?
     @State private var showingDetail = false
     @State private var editing: URL?
     @FocusState private var aliasFocused: Bool
     @State private var alias = ""
     @State private var notice = ""
     @State private var copied: String?
-    @State private var generatingKey = false
+    @State private var editor: Editor?
     private func name(_ key: PublicIdentity) -> String { aliases[key.fingerprint] ?? key.filename }
     private var matches: [PublicIdentity] {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return term.isEmpty ? keys : keys.filter { key in
-            [name(key), key.filename, key.fingerprint, key.algorithm].contains { $0.localizedCaseInsensitiveContains(term) }
+            [name(key), key.filename, key.fingerprint, key.algorithm, "SSH"].contains { $0.localizedCaseInsensitiveContains(term) }
         }
     }
-    private var current: PublicIdentity? { matches.first(where: { $0.id == selection }) ?? matches.first }
+    private var apiMatches: [APIKeyRecord] {
+        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return term.isEmpty ? apiKeys : apiKeys.filter { key in
+            [key.name, key.service, key.link?.absoluteString ?? "", "API key"].contains { $0.localizedCaseInsensitiveContains(term) }
+        }
+    }
+    private var currentSelection: Selection? {
+        if let selection {
+            switch selection {
+            case .ssh(let id): if matches.contains(where: { $0.id == id }) { return selection }
+            case .api(let id): if apiMatches.contains(where: { $0.id == id }) { return selection }
+            }
+        }
+        if let key = matches.first { return .ssh(key.id) }
+        if let key = apiMatches.first { return .api(key.id) }
+        return nil
+    }
+    private var current: PublicIdentity? {
+        guard case .ssh(let id) = currentSelection else { return nil }
+        return matches.first { $0.id == id }
+    }
+    private var currentAPI: APIKeyRecord? {
+        guard case .api(let id) = currentSelection else { return nil }
+        return apiMatches.first { $0.id == id }
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -462,31 +537,42 @@ struct PublicKeyPanel: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("SSH Keys").font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .title1).pointSize, relativeTo: .title))
+                        Text("Keys").font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .title1).pointSize, relativeTo: .title))
                             .bold()
                             .kerning(-0.6)
-                        Text("Local public keys · ~/.ssh").font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize + 1, relativeTo: .caption)).foregroundStyle(.secondary)
+                        Text("SSH public keys · API keys in Keychain").font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize + 1, relativeTo: .caption)).foregroundStyle(.secondary)
                     }
                     Spacer()
 
                 }
                 if !notice.isEmpty { Text(notice).font(.callout).foregroundStyle(.orange) }
-                if keys.isEmpty {
+                if !apiNotice.isEmpty { Text(apiNotice).font(.callout).foregroundStyle(.orange) }
+                if keys.isEmpty && apiKeys.isEmpty && apiLoading {
+                    ProgressView("Loading keys…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if keys.isEmpty && apiKeys.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "key").font(.largeTitle).foregroundStyle(.secondary)
-                        Text("No public keys found in ~/.ssh").font(.headline)
-                        Text("Use + in the tab bar to generate or import a key.").foregroundStyle(.secondary)
+                        Text("No keys yet").font(.headline)
+                        Text("Use + in the tab bar to add an SSH or API key.").foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     HStack(alignment: .top, spacing: 16) {
                         if !narrow || !showingDetail {
                             VStack(alignment: .leading, spacing: 14) {
-                                TextField("Search by name, file, or fingerprint", text: $query)
+                                TextField("Search keys, services, or links", text: $query)
                                     .textFieldStyle(.roundedBorder)
+                                    .accessibilityLabel("Search keys")
                                 ScrollView {
                                     VStack(spacing: 4) {
-                                        ForEach(matches) { key in sidebarRow(key) }
-                                        if matches.isEmpty { Text("No matching keys").foregroundStyle(.secondary) }
+                                        if !matches.isEmpty {
+                                            sidebarTitle("SSH Keys")
+                                            ForEach(matches) { key in sidebarRow(key) }
+                                        }
+                                        if !apiMatches.isEmpty {
+                                            sidebarTitle("API Keys")
+                                            ForEach(apiMatches) { key in apiSidebarRow(key) }
+                                        }
+                                        if matches.isEmpty && apiMatches.isEmpty { Text("No matching keys").foregroundStyle(.secondary) }
                                     }
                                 }
                             }.frame(maxWidth: narrow ? .infinity : 260)
@@ -497,6 +583,10 @@ struct PublicKeyPanel: View {
                                 VStack(alignment: .leading, spacing: 16) {
                                     if narrow { Button("‹  All Keys") { showingDetail = false } }
                                     if let key = current { detail(key) }
+                                    if let key = currentAPI {
+                                        APIKeyDetail(record: key, store: apiKeyStore, delete: { removingAPIKey = key })
+                                            .id("\(key.id):\(apiRevision)")
+                                    }
                                 }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
                             }
                         }
@@ -504,47 +594,83 @@ struct PublicKeyPanel: View {
                 }
             }.padding(20)
         }.onAppear(perform: reload)
-        .onReceive(generateRequest) { generatingKey = true }
+        .onDisappear { apiRefresh?.cancel() }
+        .onReceive(generateRequest) { editor = .ssh }
         .onReceive(importRequest) { importKey() }
-        .sheet(isPresented: $generatingKey) {
-            GenerateSSHKeySheet(folder: folder) { url in
-                reload(); selection = url; query = ""; showingDetail = true
+        .onReceive(apiKeyRequest) { editor = .api(nil) }
+        .sheet(item: $editor) { item in
+            switch item {
+            case .ssh:
+                GenerateSSHKeySheet(folder: folder) { url in
+                    reload(); selection = .ssh(url); query = ""; showingDetail = true
+                }
+            case .api(let key):
+                APIKeyEditor(record: key, store: apiKeyStore) { id in reloadAPIKeys(selecting: id) }
             }
         }
+        .alert("Delete API key?", isPresented: Binding(get: { removingAPIKey != nil }, set: { if !$0 { removingAPIKey = nil } }), presenting: removingAPIKey) { key in
+            Button("Delete", role: .destructive) { deleteAPIKey(key) }
+            Button("Cancel", role: .cancel) {}
+        } message: { key in Text("Remove \(key.name) from macOS Keychain? This cannot be undone.") }
     }
 
-    private func sidebarRow(_ key: PublicIdentity) -> some View {
-        HStack(spacing: 6) {
-            if editing == key.id {
+    private func sidebarTitle(_ title: String) -> some View {
+        Text(title).settingsSectionTitle().frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 4)
+    }
+
+    private func apiSidebarRow(_ key: APIKeyRecord) -> some View {
+        LibraryRow(selected: currentAPI?.id == key.id, select: {
+            editing = nil; selection = .api(key.id); showingDetail = true
+        }) {
+            HStack {
+                KeyMark(recordID: key.id).frame(width: 34, height: 34)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verbatim: key.name).lineLimit(1)
+                    Text(key.service.isEmpty ? "API key" : key.service).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+        } action: {
+            PanelActionButton(symbol: "pencil", title: "Edit " + key.name) { editor = .api(key) }
+        }
+         .contextMenu {
+             Button("Edit API Key…") { editor = .api(key) }
+             Button("Delete API Key…", role: .destructive) { removingAPIKey = key }
+         }
+    }
+
+    @ViewBuilder private func sidebarRow(_ key: PublicIdentity) -> some View {
+        let selected = current?.id == key.id
+        if editing == key.id {
+            HStack(spacing: 6) {
                 TextField(key.filename, text: $alias)
                     .focused($aliasFocused)
                     .onAppear { aliasFocused = true }
                     .onSubmit { saveAlias(key) }
                     .onExitCommand { editing = nil }
-                Button { saveAlias(key) } label: { Image(systemName: "checkmark") }
-                    .help("Save alias").accessibilityLabel("Save alias")
-                Button { editing = nil } label: { Image(systemName: "xmark") }
-                    .help("Cancel").accessibilityLabel("Cancel")
-            } else {
-                Button { editing = nil; selection = key.id; showingDetail = true } label: {
-                    HStack {
-                        KeyMark(key: key).frame(width: 34, height: 34)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(verbatim: name(key)).lineLimit(1)
-                            Text(key.algorithm).font(.caption2.monospaced()).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }.contentShape(Rectangle())
+                PanelActionButton(symbol: "checkmark", title: "Save alias") { saveAlias(key) }
+                PanelActionButton(symbol: "xmark", title: "Cancel") { editing = nil }
+            }.padding(8).frame(minHeight: 50).modifier(LibraryRowSurface(selected: selected))
+        } else {
+            LibraryRow(selected: selected, select: {
+                editing = nil; selection = .ssh(key.id); showingDetail = true
+            }) {
+                HStack {
+                    KeyMark(key: key).frame(width: 34, height: 34)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(verbatim: name(key)).lineLimit(1)
+                        Text(key.algorithm).font(.caption2.monospaced()).foregroundStyle(.secondary)
+                    }
                 }
-                Button {
-                    selection = key.id
+            } action: {
+                PanelActionButton(symbol: "pencil", title: "Edit alias for " + name(key)) {
+                    selection = .ssh(key.id)
                     alias = aliases[key.fingerprint] ?? ""
                     editing = key.id
-                } label: { Image(systemName: "pencil") }
-                .help("Edit alias").accessibilityLabel("Edit alias for " + name(key))
+                }
             }
-        }.buttonStyle(HoverButtonStyle()).padding(8)
-         .background(current?.id == key.id ? Color.accentColor.opacity(0.2) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        }
     }
 
     private func saveAlias(_ key: PublicIdentity) {
@@ -555,26 +681,28 @@ struct PublicKeyPanel: View {
     }
 
     @ViewBuilder private func detail(_ key: PublicIdentity) -> some View {
-        KeyMark(key: key).frame(width: 56, height: 56)
-        VStack(alignment: .leading, spacing: 4) {
-            Text(verbatim: name(key)).font(.title2.bold())
-            Text(key.filename + " · " + key.algorithm).font(.caption.monospaced()).foregroundStyle(.secondary)
-        }
+        KeyDetailHeader(mark: KeyMark(key: key), title: name(key), subtitle: key.filename + " · " + key.algorithm,
+                        added: key.addedAt, historyID: key.fingerprint)
+            .task(id: key.id) { KeyDates.accessed(key.fingerprint) }
         Divider()
-        copyField("Fingerprint", key.fingerprint)
-        copyField("Public Key", key.publicLine)
-        Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([key.url]) }
+        copyField("Fingerprint", key.fingerprint, historyID: key.fingerprint)
+        copyField("Public Key", key.publicLine, historyID: key.fingerprint)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("File location").settingsSectionTitle()
+            Button { NSWorkspace.shared.activateFileViewerSelecting([key.url]) } label: {
+                KeyDestinationLabel(symbol: "folder", title: key.filename,
+                                    subtitle: (key.url.path as NSString).abbreviatingWithTildeInPath, path: true)
+            }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface()
+                .help("Show in Finder").accessibilityLabel("Show " + key.filename + " in Finder")
+        }
     }
 
-    private func copyField(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.headline)
-            HStack(alignment: .top) {
-                Text(verbatim: value).font(.body.monospaced()).textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button { copy(value); copied = value } label: {
-                    Image(systemName: copied == value ? "checkmark" : "doc.on.doc")
-                }.help("Copy " + label).accessibilityLabel("Copy " + label)
+    private func copyField(_ label: String, _ value: String, historyID: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(label).settingsSectionTitle()
+            KeyValueCard(value: value) {
+                PanelActionButton(symbol: copied == value ? "checkmark" : "doc.on.doc",
+                                  title: "Copy " + label, highlighted: copied == value) { copy(value); copied = value; KeyDates.accessed(historyID) }
             }
         }.task(id: copied) {
             guard copied == value else { return }
@@ -593,6 +721,35 @@ struct PublicKeyPanel: View {
             keys = []
             notice = [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains((error as NSError).code) ? "" : error.localizedDescription
         }
+        reloadAPIKeys()
+    }
+
+    private func reloadAPIKeys(selecting id: UUID? = nil) {
+        apiRefresh?.cancel()
+        apiLoading = true
+        let store = apiKeyStore
+        apiRefresh = Task {
+            defer { if !Task.isCancelled { apiLoading = false } }
+            do {
+                let records = try await Task.detached(priority: .userInitiated) { try store.list() }.value
+                guard !Task.isCancelled else { return }
+                apiKeys = records
+                apiRevision += 1
+                apiNotice = ""
+                if let id { selection = .api(id); query = ""; showingDetail = true }
+            } catch { if !Task.isCancelled { apiNotice = error.localizedDescription } }
+        }
+    }
+
+    private func deleteAPIKey(_ key: APIKeyRecord) {
+        let store = apiKeyStore
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) { try store.delete(id: key.id) }.value
+                UserDefaults.standard.removeObject(forKey: KeyDates.storageKey(key.id.uuidString))
+                reloadAPIKeys()
+            } catch { apiNotice = error.localizedDescription }
+        }
     }
     private func importKey() {
         let picker = NSOpenPanel()
@@ -602,12 +759,12 @@ struct PublicKeyPanel: View {
         do {
             let key = try PublicIdentity(source)
             if let existing = keys.first(where: { $0.fingerprint == key.fingerprint }) {
-                selection = existing.id
+                selection = .ssh(existing.id)
             } else {
                 let dest = folder.appendingPathComponent(source.lastPathComponent)
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                 try Data((key.publicLine + "\n").utf8).write(to: dest, options: .withoutOverwriting)
-                reload(); selection = dest
+                reload(); selection = .ssh(dest)
             }
             query = ""; showingDetail = true
         } catch { notice = error.localizedDescription }

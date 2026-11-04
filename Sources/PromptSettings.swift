@@ -113,11 +113,12 @@ struct PromptSettings: View {
     @AppStorage("customAccent") private var customAccent = ""
     @AppStorage("themeFile.Oh My Posh") private var poshFile = ""
     @AppStorage("themeFile.Starship") private var starshipFile = ""
+    @AppStorage("followThemeAccent") private var followThemeAccent = true
     @AppStorage("followThemeBackground") private var followBackground = true
     @State private var search = ""
     @State private var hexDraft = ""
 
-    private let accent = SettingsStyle.accent
+    private let accent = Color.accentColor
     private var tint: Color { RGB(customAccent)?.color ?? (Palette(rawValue: palette) ?? .violet).color }
     private var files: [URL] { library.files }
     private var selectedFile: URL? {
@@ -190,7 +191,6 @@ struct PromptSettings: View {
                 }
             }
         }
-        .tint(accent)
         .onAppear { hexDraft = customAccent }
         .onChange(of: library) { _ in search = "" }
         .onChange(of: [String(enabled), palette, String(identity), design.rawValue, library.rawValue,
@@ -311,6 +311,8 @@ struct PromptSettings: View {
                     preferenceRow("Show identity", detail: "User and computer name", value: $identity)
                     Divider().padding(.horizontal, 16)
                 }
+                preferenceRow("Match interface accent", detail: "Use the applied prompt theme’s color for tabs, buttons, and selections.", value: $followThemeAccent)
+                Divider().padding(.horizontal, 16)
                 preferenceRow("Theme background", detail: "Match the terminal to your prompt", value: $followBackground)
             }.settingsSurface(accent: accent)
         }
@@ -464,8 +466,40 @@ struct PromptSettings: View {
     }
 }
 
-enum SettingsStyle {
-    static let accent = Color(red: 0.46, green: 0.87, blue: 0.76)
+// Every AppKit hosting view is a separate SwiftUI root, including the title bar.
+struct ThemedRoot<Content: View>: View {
+    let content: Content
+    @AppStorage("powerline") private var enabled = false
+    @AppStorage("followThemeAccent") private var follow = true
+    @AppStorage("themeLibrary") private var library = ThemeLibrary.builtin
+    @AppStorage("themeFile.Oh My Posh") private var poshFile = ""
+    @AppStorage("themeFile.Starship") private var starshipFile = ""
+    @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
+    @AppStorage("customAccent") private var custom = ""
+
+    private var color: Color {
+        guard enabled && follow else { return InterfaceAccent.mint }
+        if library == .builtin {
+            return RGB(custom)?.color ?? (Palette(rawValue: palette) ?? .violet).color
+        }
+        let name = library == .posh ? poshFile : starshipFile
+        let applied = InterfaceAccent.catalog[name] != nil ? name : library.files.first?.lastPathComponent ?? ""
+        return InterfaceAccent.catalog[applied].flatMap(RGB.init)?.color ?? InterfaceAccent.mint
+    }
+
+    var body: some View {
+        let accent = color
+        content.accentColor(accent).tint(accent)
+    }
+}
+
+private enum InterfaceAccent {
+    static let mint = Color(red: 0.46, green: 0.87, blue: 0.76)
+    static let catalog: [String: String] = {
+        guard let url = PromptSetup.folder?.appendingPathComponent("theme-accents.json"),
+              let data = try? Data(contentsOf: url) else { return [:] }
+        return (try? JSONDecoder().decode([String: String].self, from: data)) ?? [:]
+    }()
 }
 
 extension View {
@@ -473,7 +507,7 @@ extension View {
         self.font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
     }
 
-    func settingsSurface(selected: Bool = false, accent: Color = SettingsStyle.accent) -> some View {
+    func settingsSurface(selected: Bool = false, accent: Color = Color.accentColor) -> some View {
         self.background(selected ? accent.opacity(0.065) : Color.white.opacity(0.025))
             .clipShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
             .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tile).strokeBorder(selected ? accent.opacity(0.65) : .white.opacity(0.09)))
@@ -669,7 +703,7 @@ private struct ShortcutSettings: View {
                 ForEach(ShortcutScope.allCases, id: \.self) { scope in
                     Divider()
                     HStack {
-                        Image(systemName: scope.icon).foregroundStyle(SettingsStyle.accent).frame(width: 20)
+                        Image(systemName: scope.icon).foregroundStyle(Color.accentColor).frame(width: 20)
                         Text(scope.rawValue).font(.callout)
                         Spacer(minLength: 4)
                         let name = scope.rawValue
@@ -694,10 +728,10 @@ private struct ShortcutSettings: View {
         } label: {
             Text(verbatim: active ? "Press keys…" : value)
                 .font(TabTypography.suite(size: 12, relativeTo: .callout))
-                .foregroundStyle(active ? SettingsStyle.accent : Color.primary)
+                .foregroundStyle(active ? Color.accentColor : Color.primary)
                 .frame(width: keyWidth, height: 26, alignment: .center)
                 .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: SurfaceRadius.control))
-                .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.control).strokeBorder(active ? SettingsStyle.accent : .clear))
+                .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.control).strokeBorder(active ? Color.accentColor : .clear))
         }
         .buttonStyle(HoverButtonStyle())
         .accessibilityLabel((target.column == .create ? "Create " : "Select ") + target.scope.rawValue + " shortcut")

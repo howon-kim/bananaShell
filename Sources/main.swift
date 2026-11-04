@@ -36,6 +36,10 @@ enum ShellTabShortcuts {
     }
 }
 
+private func themedHost<Content: View>(rootView: Content) -> NSHostingView<ThemedRoot<Content>> {
+    NSHostingView(rootView: ThemedRoot(content: rootView))
+}
+
 private final class ShellWindow: NSWindow {
     var selectTabAtIndex: ((Int) -> Void)?
     var navigateGridTabs: ((GridTabKind, GridTabTarget) -> Bool)?
@@ -175,9 +179,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var tabBarHeight: NSLayoutConstraint!
     private let navigationItem = NSToolbarItem.Identifier("bananaShell.navigation")
     private var window: ShellWindow!
-    private lazy var keys = NSHostingView(rootView: PublicKeyPanel(generateRequest: workspace.generateKey, importRequest: workspace.importKey))
-    private lazy var automations = NSHostingView(rootView: AutomationPanel(addRequest: workspace.addAutomation))
-    private lazy var activity: NSHostingView<ActivityPanel> = NSHostingView(rootView: ActivityPanel(state: workspace, terminalView: { [weak self] id in
+    private lazy var keys = themedHost(rootView: PublicKeyPanel(generateRequest: workspace.generateKey, importRequest: workspace.importKey,
+                                                                 apiKeyRequest: workspace.addAPIKey))
+    private lazy var automations = themedHost(rootView: AutomationPanel(addRequest: workspace.addAutomation))
+    private lazy var activity: NSHostingView<ThemedRoot<ActivityPanel>> = themedHost(rootView: ActivityPanel(state: workspace, terminalView: { [weak self] id in
         self?.sessions.first(where: { $0.id == id })?.view
     }, close: { [weak self] in self?.removeShell($0) }, create: { [weak self] in self?.createTerminalTab(selecting: false) },
        releaseFocus: { [weak self] in self?.releaseActivityFocus() },
@@ -313,7 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         toolbar.displayMode = .iconOnly
         window.toolbar = toolbar
         window.contentMinSize = NSSize(width: 440, height: 200)
-        let bar = NSHostingView(rootView: TerminalToolbar(state: workspace, select: { [weak self] in self?.select($0) },
+        let bar = themedHost(rootView: TerminalToolbar(state: workspace, select: { [weak self] in self?.select($0) },
             create: { [weak self] in
                 guard let self else { return }
                 self.createTerminalTab(selecting: self.workspace.selected != .activity)
@@ -350,7 +355,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         guard identifier == navigationItem else { return nil }
         let item = NSToolbarItem(itemIdentifier: identifier)
         item.label = "Workspace tabs"
-        let host = NSHostingView(rootView: FavoriteTabs(state: workspace, select: { [weak self] in self?.select($0) }))
+        let host = themedHost(rootView: FavoriteTabs(state: workspace, select: { [weak self] in self?.select($0) }))
         host.sizingOptions = []
         host.widthAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true
         host.heightAnchor.constraint(equalToConstant: WorkspaceTabMetrics.height).isActive = true
@@ -365,7 +370,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         return true
     }
 
-    private lazy var settings = NSHostingView(rootView: PromptSettings { [weak self] in self?.applyTheme() })
+    private lazy var settings = themedHost(rootView: PromptSettings { [weak self] in self?.applyTheme() })
     @objc func showPromptSettings(_ sender: Any?) { select(.settings) }
 
     private func writeTheme() throws {
