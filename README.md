@@ -37,7 +37,7 @@
 - **Keys**: generate SSH keys and store API keys in the macOS Keychain.
 
 <p align="center">
-  <img src="docs/images/notch.png" width="640" alt="Notch terminal">
+  <img src="docs/images/notch.png" width="860" alt="Notch terminal dropped down from the MacBook notch">
 </p>
 
 ## Install
