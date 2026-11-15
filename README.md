@@ -8,7 +8,7 @@ The terminal uses bundled JetBrains Mono NL Nerd Font Mono at 14 pt with 1.15× 
 
 Requires macOS 13 or later and [tmux](https://github.com/tmux/tmux).
 
-- **Homebrew:** `brew install --cask howon-kim/tap/bananashell` (installs tmux too)
+- **Homebrew:** `brew install --cask howon-kim/tap/bananashell` (installs tmux too). If Homebrew reports an untrusted tap, run `brew trust howon-kim/tap` first.
 - **Download:** get the latest `bananaShell-<version>.dmg` from [Releases](https://github.com/howon-kim/bananaShell/releases/latest), drag bananaShell to Applications, and run `brew install tmux`.
 
 Releases are signed with Developer ID and notarized by Apple. bananaShell checks for updates automatically; choose **bananaShell → Check for Updates…** to check now. Maintainers: see [docs/RELEASING.md](docs/RELEASING.md).
