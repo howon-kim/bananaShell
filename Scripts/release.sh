@@ -29,6 +29,15 @@ APP="$OUT/export/bananaShell.app"
 DMG="$OUT/bananaShell-$VERSION.dmg"
 
 step() { print -P "\n%F{yellow}==>%f $*"; }
+# Apple's timestamp and notary services fail transiently; retry with backoff.
+retry() {
+  local attempt=1 max=4
+  until "$@"; do
+    (( attempt >= max )) && { echo "Failed after $max attempts: $*" >&2; return 1; }
+    echo "Attempt $attempt failed; retrying in $(( attempt * 15 ))s…" >&2
+    sleep $(( attempt * 15 )); (( attempt++ ))
+  done
+}
 
 if [[ -n $(git status --porcelain) ]]; then
   echo "Working tree has uncommitted changes; commit them first so the release matches $TAG." >&2
@@ -63,23 +72,36 @@ cat > "$OUT/ExportOptions.plist" <<EOF
   <key>teamID</key><string>$TEAM_ID</string>
 </dict></plist>
 EOF
-xcodebuild -exportArchive -archivePath "$OUT/bananaShell.xcarchive" -exportPath "$OUT/export" \
-  -exportOptionsPlist "$OUT/ExportOptions.plist" -quiet
+export_app() {
+  rm -rf "$OUT/export"
+  xcodebuild -exportArchive -archivePath "$OUT/bananaShell.xcarchive" -exportPath "$OUT/export" \
+    -exportOptionsPlist "$OUT/ExportOptions.plist" -quiet
+}
+retry export_app
 codesign --verify --deep --strict "$APP"
 
 step "Notarizing the app"
 ditto -c -k --keepParent "$APP" "$OUT/notarize.zip"
-xcrun notarytool submit "$OUT/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --wait
-xcrun stapler staple "$APP"
+# Fail on a rejected submission (notarytool exits 0 for "Invalid").
+notarize() {
+  local result
+  result=$(xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --output-format json) || return 1
+  print -r -- "$result" | grep -q '"status" *: *"Accepted"' && return 0
+  print -r -- "$result" >&2
+  [[ $result == *'"Invalid"'* ]] && { echo "Notarization rejected; see: xcrun notarytool log <id> --keychain-profile $NOTARY_PROFILE" >&2; exit 1; }
+  return 1
+}
+retry notarize "$OUT/notarize.zip"
+retry xcrun stapler staple "$APP"
 
 step "Building the disk image"
 STAGE="$OUT/dmg"; mkdir -p "$STAGE"
 ditto "$APP" "$STAGE/bananaShell.app"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "bananaShell" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" -quiet
-codesign --sign "Developer ID Application" --timestamp "$DMG"
-xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
-xcrun stapler staple "$DMG"
+retry codesign --force --sign "Developer ID Application" --timestamp "$DMG"
+retry notarize "$DMG"
+retry xcrun stapler staple "$DMG"
 spctl --assess --type open --context context:primary-signature -v "$DMG"
 
 step "Signing the update for Sparkle"
@@ -108,11 +130,17 @@ EOF
 
 step "Creating GitHub release $TAG"
 git tag -a "$TAG" -m "bananaShell $VERSION"
-git push origin "$TAG"
+retry git push origin "$TAG"
 FLAGS=(--draft)
 [[ $PUBLISH == --publish ]] && FLAGS=()
 gh release create "$TAG" "$DMG" "$OUT/appcast.xml" --repo "$REPO" --title "bananaShell $VERSION" --generate-notes "${FLAGS[@]}"
 SHA=$(shasum -a 256 "$DMG" | cut -d' ' -f1)
 print "\nDone: $DMG"
 print "SHA-256 (for the Homebrew cask): $SHA"
-[[ $PUBLISH == --publish ]] || print "The release is a draft. Publish it on GitHub so Sparkle and the download link pick it up."
+if [[ $PUBLISH == --publish ]]; then
+  step "Updating the Homebrew cask"
+  "$ROOT/Scripts/update-cask.sh" "$VERSION" "$SHA"
+else
+  print "The release is a draft. Publish it on GitHub, then run:"
+  print "  Scripts/update-cask.sh $VERSION $SHA"
+fi

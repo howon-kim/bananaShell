@@ -46,12 +46,20 @@ reaches nobody until you publish it.
 
 ## Homebrew
 
-After publishing, copy `packaging/homebrew/bananashell.rb` into
-`Casks/bananashell.rb` of the `howon-kim/homebrew-tap` repository, set `version`
-and the `sha256` printed by the script. Users install with:
+The cask lives in [howon-kim/homebrew-tap](https://github.com/howon-kim/homebrew-tap)
+(`Casks/bananashell.rb`, generated from `packaging/homebrew/bananashell.rb`).
+`Scripts/release.sh <version> --publish` updates it automatically. For a draft,
+publish the release first, then run the command the script prints:
 
 ```sh
-brew install --cask howon-kim/tap/bananashell
+Scripts/update-cask.sh <version> <sha256>
 ```
 
-The cask installs `tmux`, which bananaShell needs.
+Users install with `brew install --cask howon-kim/tap/bananashell`; the cask installs `tmux`, which bananaShell needs.
+
+## Transient failures
+
+Exporting (timestamping), notarization, stapling and the tag push are retried up
+to four times with increasing delays. A notarization that Apple rejects as
+"Invalid" stops immediately; inspect it with
+`xcrun notarytool log <submission-id> --keychain-profile bananaShell-notary`.
