@@ -10,5 +10,13 @@
     <string>bananaShell</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>bananaShell allows commands you run in its terminals to control other apps.</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/howon-kim/bananaShell/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>XiGO8YkpsdRiqZaQxUcgmDXqfeji6FOiWKcT+qtorio=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Howon Kim. MIT License.</string>
 </dict>
 </plist>

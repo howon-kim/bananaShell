@@ -6,6 +6,9 @@ packages:
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm.git
     revision: be5c0a8b2ce3692ffaad1c3460720dbc16a5bf1f
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle.git
+    exactVersion: 2.10.1
 targets:
   bananaShell:
     type: application
@@ -27,6 +30,7 @@ targets:
         buildPhase: resources
     dependencies:
       - package: SwiftTerm
+      - package: Sparkle
     settings:
       base:
         SWIFT_INCLUDE_PATHS: '$(inherited) "$(SRCROOT)/Vendor/BananaZstd/Sources/BananaZstd/include"'
@@ -37,4 +41,8 @@ targets:
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_IDENTITY: "-"
+      configs:
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_ENTITLEMENTS: bananaShell.entitlements
     scheme: {}

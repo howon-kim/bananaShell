@@ -1127,7 +1127,10 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
             }
         }
         notificationTimer?.tolerance = 0.2
-        if !CommandLine.arguments.contains("--automation-notification") { restoreWindows() }
+        if !CommandLine.arguments.contains("--automation-notification") {
+            restoreWindows()
+            AppUpdates.shared.start()
+        }
     }
 
     private func makeWindow() -> WorkspaceWindowController {
@@ -1306,7 +1309,7 @@ MainActor.assumeIsolated {
     app.setActivationPolicy(.regular)
     let menu = NSMenu()
     for (name, items) in [
-        ("bananaShell", [("Prompt Settings…", "showPromptSettings:", ","), ("Quit bananaShell", "terminate:", "q")]),
+        ("bananaShell", [("About bananaShell", "orderFrontStandardAboutPanel:", ""), ("Check for Updates…", "checkForUpdates:", ""), ("Prompt Settings…", "showPromptSettings:", ","), ("Quit bananaShell", "terminate:", "q")]),
         ("Shell", [("New Window", "newWindow:", CreationKeys.shared.windowKey), ("New Group", "newGroup:", CreationKeys.shared.key("Group")), ("New Page", "newPage:", CreationKeys.shared.key("Page")), ("New Terminal", "newTab:", CreationKeys.shared.key("Terminal")), ("Close Tab", "closeTab:", "w"), ("Notch Terminal", "toggleNotchTerminal:", "`"),
                    ("Next Tab", "nextTab:", "}"), ("Previous Tab", "previousTab:", "{")]),
         ("Edit", [("Copy", "copy:", "c"), ("Paste", "paste:", "v")])
@@ -1316,6 +1319,7 @@ MainActor.assumeIsolated {
         for (title, action, key) in items {
             let item = submenu.addItem(withTitle: title, action: NSSelectorFromString(action), keyEquivalent: key)
             if name == "Shell" || action == "showPromptSettings:" { item.target = delegate }
+            if action == "checkForUpdates:" { item.target = AppUpdates.shared }
         }
         if name == "Shell" {
             submenu.addItem(.separator())

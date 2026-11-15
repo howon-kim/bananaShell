@@ -4,7 +4,16 @@ bananaShell is a tabbed macOS terminal for local login shells. SwiftTerm display
 
 The terminal uses bundled JetBrains Mono NL Nerd Font Mono at 14 pt with 1.15× line spacing. Theme previews use the same font so prompt icons work without a separate font installation. Browse Oh My Posh and Starship previews directly in the theme list.
 
-## Run the app
+## Install
+
+Requires macOS 13 or later and [tmux](https://github.com/tmux/tmux).
+
+- **Homebrew:** `brew install --cask howon-kim/tap/bananashell` (installs tmux too)
+- **Download:** get the latest `bananaShell-<version>.dmg` from [Releases](https://github.com/howon-kim/bananaShell/releases/latest), drag bananaShell to Applications, and run `brew install tmux`.
+
+Releases are signed with Developer ID and notarized by Apple. bananaShell checks for updates automatically; choose **bananaShell → Check for Updates…** to check now. Maintainers: see [docs/RELEASING.md](docs/RELEASING.md).
+
+## Build from source
 
 Install tmux once with `brew install tmux`. In Xcode, open `bananaShell.xcodeproj`, select the **bananaShell** scheme and **My Mac**, then press ⌘R. Alternatively, run the following command from the project directory on a Mac with the Swift toolchain installed. SwiftPM downloads dependencies on the first run.
 
