@@ -1,90 +1,57 @@
-# bananaShell
+<p align="center">
+  <img src="docs/images/icon.png" width="128" alt="bananaShell icon">
+</p>
 
-bananaShell is a tabbed macOS terminal for local login shells. SwiftTerm displays terminals backed by a dedicated tmux server, so shells and their running processes survive closing the app.
+<h1 align="center">bananaShell</h1>
 
-The terminal uses bundled JetBrains Mono NL Nerd Font Mono at 14 pt with 1.15× line spacing. Theme previews use the same font so prompt icons work without a separate font installation. Browse Oh My Posh and Starship previews directly in the theme list.
+<p align="center">
+  A macOS terminal whose sessions survive quitting the app.<br>
+  Grouped grids, a drop-down notch terminal, and alerts when Claude Code finishes.
+</p>
+
+<p align="center">
+  <a href="https://github.com/howon-kim/bananaShell/releases/latest"><img src="https://img.shields.io/github/v/release/howon-kim/bananaShell?label=release&color=f5c518" alt="Latest release"></a>
+  <a href="https://github.com/howon-kim/bananaShell/releases"><img src="https://img.shields.io/github/downloads/howon-kim/bananaShell/total?color=f5c518" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple" alt="macOS 13+">
+  <img src="https://img.shields.io/badge/Apple-notarized-black?logo=apple" alt="Notarized by Apple">
+  <a href="https://github.com/howon-kim/homebrew-tap"><img src="https://img.shields.io/badge/homebrew-cask-orange?logo=homebrew" alt="Homebrew cask"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/howon-kim/bananaShell" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshot.png" width="860" alt="bananaShell window with a grid of terminals">
+</p>
+
+## Features
+
+- **Persistent sessions**: shells and running processes keep going after you quit, and reconnect with your layout on the next launch.
+- **Groups, pages and grids**: show 1 to 16 terminals per page and drag tabs, pages and groups between windows.
+- **Notch terminal**: press <kbd>⌃</kbd><kbd>`</kbd> from any app to drop the current terminal down from the notch.
+- **Claude Code alerts**: get a notch card when a Claude response completes, with a preview of the reply.
+- **Automations**: record a terminal session once, then replay it on a schedule. It asks you when a prompt needs an answer.
+- **Prompt themes**: built-in Powerline designs, plus Oh My Posh and Starship themes.
+- **Keys**: generate SSH keys and store API keys in the macOS Keychain.
+
+<p align="center">
+  <img src="docs/images/notch.png" width="640" alt="Notch terminal">
+</p>
 
 ## Install
 
-Requires macOS 13 or later and [tmux](https://github.com/tmux/tmux).
-
-- **Homebrew:** `brew install --cask howon-kim/tap/bananashell` (installs tmux too). If Homebrew reports an untrusted tap, run `brew trust howon-kim/tap` first.
-- **Download:** get the latest `bananaShell-<version>.dmg` from [Releases](https://github.com/howon-kim/bananaShell/releases/latest), drag bananaShell to Applications, and run `brew install tmux`.
-
-Releases are signed with Developer ID and notarized by Apple. bananaShell checks for updates automatically; choose **bananaShell → Check for Updates…** to check now. Maintainers: see [docs/RELEASING.md](docs/RELEASING.md).
-
-## Build from source
-
-Install tmux once with `brew install tmux`. In Xcode, open `bananaShell.xcodeproj`, select the **bananaShell** scheme and **My Mac**, then press ⌘R. Alternatively, run the following command from the project directory on a Mac with the Swift toolchain installed. SwiftPM downloads dependencies on the first run.
-
 ```sh
-swift run bananaShell
+brew install --cask howon-kim/tap/bananashell
 ```
 
-## Use the terminal
+Or download the `.dmg` from [Releases](https://github.com/howon-kim/bananaShell/releases/latest) and run `brew install tmux`.
 
-Press ⌘C to copy selected text, ⌘V to paste, or Control-C to interrupt a running command. New terminal tabs start in your home directory (`~`). Open a tab with ⌘T and close it with ⌘W or `exit`. Closing the last tab quits the app.
+Requires macOS 13 or later. Updates install automatically.
+If Homebrew says the tap is untrusted, run `brew trust howon-kim/tap` first.
 
-New terminals use `screen-256color` for compatibility with SSH hosts that do not recognize `tmux-256color`. After upgrading, open a **new terminal tab** before connecting over SSH; restored shells keep their original environment. In an existing SSH session with broken Backspace display, `TERM=screen-256color sh` opens a temporary compatible shell; `exit` returns to the previous shell.
+## Docs
 
-Quitting bananaShell disconnects the display while the terminals keep running. Closing a window yourself (its close button) first asks for confirmation; confirming ends that window's terminals, and the window does not reopen on the next launch. Reopening reconnects to the same shells, working directories, terminal screens and processes, with group/page layouts preserved. Scroll up to view tmux's retained output (up to 50,000 lines per terminal). A terminal's **×**, **⌘W**, or `exit` ends that session; it will not return on the next launch. Closing a page ends its terminals. The app uses its own tmux server and configuration, separate from personal tmux sessions. Status metadata is refreshed once per app on a background queue and shared by all windows, with only one read in flight. Live terminal output continues through the existing PTY clients. Layouts are saved independently of metadata refresh, and unchanged snapshots skip serialization. macOS launchd starts the server as an independent service, so stopping bananaShell's background activity from the Dock does not stop its terminals. The service is registered on demand for the current login, without starting terminals automatically at login. Sessions survive app restarts, but not logging out, a Mac restart, or explicitly stopping the tmux service. When the server is gone on the next launch, every saved tab reopens as a fresh shell in its last working directory, keeping its shortcut slot and group/page placement; running processes and scrollback are not recovered. A server already running from an older app version is left intact; the independent service takes over after those sessions have ended. In bundled builds, launchd runs a headless instance of the native **bananaShell** executable, which hosts tmux as its child and retains the app identity for privacy requests. `AssociatedBundleIdentifiers` alone is insufficient for an external Homebrew executable. After upgrading, finish and close all existing terminal sessions before opening a new one to load this association; reopening the app alone keeps the old server. Test Automation prompts using the built `.app`, not the unbundled SwiftPM executable.
+- [Guide](docs/GUIDE.md): every feature and shortcut in detail
+- [Releasing](docs/RELEASING.md): for maintainers
 
-Mouse selection in tmux copies to the macOS clipboard. Hold **Shift** while dragging to use native terminal selection and **⌘C**. Press **Escape** to leave scrollback mode and return to the live terminal. For recognized AI terminals (including Claude, Codex and Gemini), scrolling up holds the terminal history even if the application requests mouse events. New output keeps accumulating without moving the held view. Scroll to the bottom or press **Escape** to resume the live screen. These bindings are refreshed when the updated app reconnects; existing sessions keep running.
+## License
 
-Drag a terminal tab or a terminal panel’s title bar onto another terminal tab to place it there, including in another page or window. Drop a panel title into the list’s blank space to move it to that page or to the end of its current list. Double-clicking a panel title still expands the same session. Press ⌘1 through ⌘9 to select the first nine terminals in the **current page**, ⌘0 for the tenth, ⌘- for the eleventh, or ⌘= for the twelfth. Numbers follow the displayed order: reordering updates them immediately, closing a terminal closes the numbering gap, and moving to another page uses that page’s order. Only the current page shows terminal shortcut hints; hovering over another page previews its terminals without duplicate hints. If no terminal occupies a position, the selection stays unchanged.
-
-Use **Shell → New Window** (⌘N by default) to open an independent workspace. Drag a group name onto another bananaShell window to add it there as a separate group tab; the destination group bar highlights while hovering. Drop outside all bananaShell windows to move the entire group into a new window. Both moves keep its name, pages, layout, selected page, running processes and terminal views. Shortcuts follow the destination window’s group order and the current page’s terminal order. Escape cancels the drag. You can also choose **Move Group to New Window** from the group’s context menu. Moving the last group closes the empty source window. Menu actions and shortcuts apply to the active window, and all windows’ group/page layouts reconnect on relaunch. An existing custom creation shortcut assigned to ⌘N takes precedence over the New Window shortcut.
-
-The top row contains your groups. Drag a group onto another group tab in the same window to reorder it; an insertion marker shows the new position. Group shortcuts follow the new order, while the selected group and its layout stay intact. Drag previews show an icon and terminal count; insertion markers glide between targets, moves settle with a short spring, and cancelled drags return to their starting position. These effects respect macOS Reduce Motion. Click a group to see its terminal grid, or double-click its name to rename it. The top **+** or ⌘G creates a group. Press ⌘P to start a new page with a focused terminal, even if the previous page still has room. In Settings → Keyboard shortcuts, click a Create keycap and press Command, Option, or Control plus a letter. Click a Select keycap and press the modifier with a number from the top row. Escape cancels recording. The second row contains just that group’s terminal tabs: click one to focus that terminal in its page’s grid, or use the lower **+** (⌘T) to add a terminal. In a multi-terminal grid, double-click a terminal’s title bar to open the same session at full size. Click the group again to return to its grid. Use the grid icons marked **1**, **2** (two columns), **4**, **6** (three columns and two rows), or **16** to choose how many terminals appear on each page; the terminal strip groups each page’s terminals together in multi-cell layouts. The 1×1 layout shows terminal tabs without page labels. Click the page label at the start of a group to show its grid. Drag a Page label onto another Page label in the same group to reorder entire pages; an insertion marker shows the new position. Each page keeps its terminals and order, and the current page remains selected at its new position. The current page stays expanded. Other pages show just their labels; hover over a label to preview its terminal tabs without changing the grid. Each page label shows its shortcut.
-
-By default, use **⌃1–9** to select a group by its position in the **current window**, or **⌥1–9** to select a page by its position in the **current group**. **0** selects the tenth group or page. Terminal shortcuts (**⌘1–9**) count terminals in the current page; in the one-terminal layout, where every terminal has its own page, they count every terminal in the group instead. Reordering updates the shortcut numbers while keeping the same content selected. Page tabs show their shortcuts beside their names; group shortcuts appear in the group tab’s tooltip. In the grid with no terminal focused, **[** and **]** change pages directly. When typing in a terminal they remain ordinary characters; use **⌥[** or **⌥]** to switch pages, or use the focused terminal’s positional shortcut again to release keyboard focus. Use **⌃[** and **⌃]** to cycle groups. In Settings → Keyboard shortcuts, change the Select modifier for Group, Page, or Terminal. Choosing an occupied modifier swaps the two rows. Custom modifiers stay unchanged when tabs move; bracket navigation follows the group and page modifiers, and the terminal modifier also applies to minus and equals.
-
-Drag a terminal tab onto another Group tab to move it there, or onto a Page label to put it into that specific page. The target page highlights, including its terminal tabs. A drop into a full page puts the incoming terminal first and carries the overflow into the following page; other pages retain their contents. Drag a Page label onto a Group tab to move that entire page, preserving terminal order and starting a separate page in the destination. The target group highlights while hovering. These drops also work between windows; shortcut numbers follow the destination order. Running sessions and output stay intact. Dropping on the same group or outside a valid target leaves the layout unchanged; Escape cancels. The destination keeps its grid size, so a larger incoming page can span multiple pages in a smaller grid. Click × on a group to review the number of terminals and close the entire group, including all its pages and terminal sessions. Running processes in those terminals stop, and those sessions do not return on relaunch. Other groups retain their contents. Closing the last group also closes its window; quitting the app still retains sessions, while closing a window after confirming ends its sessions. Click × on a page to review how many terminals it contains and close those sessions together. A terminal’s own × closes just that session. In the grid, click a terminal to type or use its positional shortcut to focus it within the current page. The same shortcut releases keyboard focus. Escape is passed to the active terminal. **Restore window size and position** controls window geometry; terminal sessions and group/page layouts always reconnect.
-
-In **Prompt Settings → Terminal plugins**, choose **Install** beside a plugin. Choose zsh-autosuggestions for history suggestions or pay-respects to review fixes with `f` after a failed command. Installation enables the plugin for new zsh tabs. Turn it off in the same list. Your own shell startup files are not modified.
-
-Open **Prompt Settings** (⌘,) to enable the Powerline prompt, choose a design (Classic blocks, a Minimal single line, a Stacked two-line prompt, or a Ribbon with connected arrow segments and the active environment), pick an accent color, or show or hide the user and computer names. Built-in accents support any 24-bit sRGB color through the color picker or a six-digit HEX value. For a community theme, choose Oh My Posh or Starship under Theme library, search by name, and select it. These libraries use their own theme colors. **Match interface accent** uses the applied theme’s accent for tabs, buttons, and selections independently of the terminal background. Turn it off to keep the interface mint. If the engine is missing, **Install** opens a live terminal in the dialog and installs the corresponding [Homebrew formula](https://formulae.brew.sh/). If Homebrew is missing too, the dialog explains that it will install [Homebrew](https://brew.sh/) first; its installer may request an administrator password in the terminal. The selected theme is applied only after installation and the engine's version check succeed. Cancelling or a failed installation keeps the previous theme. Bundled configurations come from the [Oh My Posh themes](https://github.com/JanDeDobbeleer/oh-my-posh/tree/main/themes) and [Starship presets](https://starship.rs/presets/); their licenses accompany the files. Changes recolor the tab bar and open zsh tabs immediately. An idle prompt redraws in place; running commands keep their terminal input and show the new prompt when they finish.
-
-## Notch terminal
-
-Press **⌃`** from any app (or choose **Shell → Notch Terminal**) to drop a terminal down from the notch. Change this global shortcut in **Settings → Keyboard shortcuts → Notch terminal**: click the keycap and press a key with ⌘, ⌥ or ⌃ (⇧ optional). A shortcut already taken by another app is rejected and the previous one stays active. Press the shortcut again or click **×** to put it away. It opens the terminal you last used and attaches a second client to the same session, so the terminal stays live in its window at the same time. While both are visible, tmux sizes the session to the one you used most recently. The header lists the current group's terminals and, with several groups, the group tabs; it follows tabs opened, closed or moved in the window while open. Click a terminal or group, or use the Terminal modifier with **1–9** (⌘ by default) for terminals in that group and the Group modifier (⌃ by default) for groups. A group reopens at the terminal last shown there. **+** or the New Terminal shortcut (⌘T by default) opens a terminal in that group, in the current terminal's folder, and shows it in the notch. Closing the notch terminal only disconnects that view; the session keeps running. Typing `exit` ends the session everywhere, as in its window.
-
-## Claude completion notch
-
-In a bananaShell zsh terminal, newly launched `claude` sessions show **Claude · Response complete** when Claude emits its [Stop event](https://code.claude.com/docs/en/hooks#stop). The notch ports BananaCal’s event-alert card, 340 pt black-to-glass surface, 20 pt corners, SUITE typography, hardware-notch inset, and animated hover tray directly. Hover reveals the same circular controls, which widen into labeled pills on hover. It also appears at the top center on displays without a notch. Click the card to reveal its terminal; hover to keep it visible or choose **Close**. Concurrent completions appear in sequence.
-
-bananaShell must be running. After rebuilding, open a new zsh terminal in the new bananaShell build and launch Claude there. Already-running Claude sessions do not receive the new hook. New shells reach the launcher through `~/Library/Application Support/bananaShell/PromptSupport`, which each app launch repoints at the running build, so restarting Claude in them picks up launcher changes; shells created before this link existed keep their original build path until closed. The hook marks a completed response, not independently verified task success. Interruptions and API failures do not produce completion alerts; Stop events reporting background tasks or scheduled wakeups are ignored. Notifications older than one minute are discarded. The Dock icon badge counts completions in terminals you were not looking at; viewing that terminal (as a tab or the focused Activity tile) clears its count, and closing it drops them. The card previews up to three lines of Claude’s final reply as plain text (markdown stripped, first 200 characters); this preview is written to an owner-only file in the session folder and deleted as soon as the app reads it. The badge requires notification badges: bananaShell requests them at launch, and if notifications were previously allowed without badges, turn on **Badge application icon** under System Settings › Notifications › bananaShell.
-
-Existing user/project settings are preserved, including custom status lines. Commands with explicit `--settings`, `--bare`, `--print`/`-p`, `--help`, or `--version` bypass this integration, as do pre-existing `claude` aliases/functions and non-zsh shells. Disabling Claude hooks also disables these alerts. BananaCal and bananaShell currently own separate overlay windows; if both display a notch simultaneously, their surfaces can overlap.
-
-To test without running Claude or making an API request, run this in a bananaShell zsh terminal from the repository folder:
-
-```sh
-/bin/sh Scripts/test-claude-notification.sh
-```
-
-Test notifications identify their sender as **bananaShell Test** and their status as **Test complete**; only real Claude notifications say **Claude / Response complete**. The script launches a temporary fake Claude executable through the real launcher and sends a Stop event for that terminal. To check the launcher retained by the current shell specifically, pass `"$_banana_claude_launcher"` as its first argument. A launcher from an old build without the Stop hook makes that check fail. The fixture is removed when the test exits.
-
-## Keys
-
-The **Keys** tab groups SSH public keys and API keys in one searchable list. Search by name, service, related link, file, fingerprint, or key type. API key values are excluded from search.
-
-For SSH keys, click **+ → Generate SSH Key…** or **Import SSH Public Key…**. Choose **Ed25519** (default), **RSA** (2048, 3072, or 4096 bits), or **ECDSA** (256, 384, or 521 bits), then enter a filename, comment, and optional passphrase. RSA defaults to 4096 bits and ECDSA to 256 bits. Suggested filenames follow the selected key type; custom filenames are preserved. bananaShell saves the key in `~/.ssh` without overwriting existing files. The public key then appears in the list.
-
-For API keys, click **+ → Add API Key…**, enter a name, an optional service and related link, and the key value. Use the related link for a provider dashboard or API documentation; click its card in the detail to open it in your browser. Links accept full HTTP or HTTPS addresses without embedded sign-in details. Values are stored in the [local macOS Keychain](https://developer.apple.com/documentation/technotes/tn3137-on-mac-keychains) without enabling iCloud synchronization. Listing keys reads metadata only; values are retrieved when you choose Show or Copy. Revealed values hide after 30 seconds, when the app loses focus, or when the detail closes. The Copy button clears its clipboard contents after 60 seconds while the app is open, provided nothing else has been copied. Click the pencil beside the key in the list to rename it, change its service or link, or replace its value; leaving the replacement empty preserves the saved value. **Delete API Key…** asks before removing it from Keychain.
-
-## Automations
-
-Select Automations (the clock icon) and click **+** in the tab bar to open a recording zsh session in your home directory. Commands run as you record. Enter your commands and any follow-up input, quit the interactive program, then type `exit` at the shell prompt.
-
-Review the recording, give it a name, and choose a time. A LaunchAgent runs the recorded commands in order through `/usr/bin/expect` in a separate pseudoterminal. Each follow-up input is stored with excerpts of the output immediately before and after it. Playback waits without a time limit for interactive input prompts and output while a command is running. It stops if the shell returns before an expected input prompt or the process exits unexpectedly. Shell initialization and command-start checks retain a 120-second timeout. Output that changes between runs, such as timestamps, may not match. Older time-based recordings retain their original playback behavior.
-
-Automations uses the same searchable list and detail layout as Keys. Search by name, command, folder, or schedule, then select a task to see its terminal and settings. On narrow windows, use **All Automations** to return to the list. When an automation asks a question, it appears in the notch as an **Automation · Needs input** card with its answer buttons always visible. The card stays until you answer, close it, or the question is resolved elsewhere, and it takes priority over Claude completion cards (which resume afterwards). Answering in the notch does not open the window; click the card or **Open** to bring the automation's detail into view, including when the window is minimized or hidden. Click ▶ in the list or **Run now** in the detail to run a task immediately without changing its schedule; the same control stops a running task. The detail also contains the command, working directory, confirmation policy, and an actions menu. Choose **Edit Automation…** to update the name, schedule, working directory, or commands. For a recorded session, use **Replace recording…** to record new commands and responses.
-
-Running tasks open their detail with a live terminal using the same 14 pt font and 1.15× line spacing as your tabs. Colors, progress redraws and cursor movement update at 100 ms intervals. You can scroll back and copy text; use the confirmation buttons below the terminal to answer questions. The terminal stays visible after completion. Reopening a task loads up to 1 MiB of recent output, then streams new bytes without rereading its history. Recorded jobs also follow the terminal’s width and height. Log files remain in `~/Library/Logs/bananaShell/`.
-
-By default, new recordings ask for approval each time a supported confirmation prompt such as `[Y/n]` or `(y/N)` appears. The dialog shows the task name and question and waits for your response. If you decline, bananaShell sends `n` and stops playback. To send `y` and Enter automatically, select the automatic approval option in Automations. Record older automations again to use this feature.
-
-When an **Ask me** automation is waiting for input, its question and answer buttons appear below the live terminal in the detail view. The buttons answer only the current question of that run and are not shown for past questions that remain only in the log. When you aren't looking at the Automations view, you can answer from the notch or from Notification Center, depending on your alert setting.
-
-In **Settings › Notifications**, choose whether system alerts (Claude completions and automation questions) appear in the **Notch** (default) or in **Notification Center**. Alerts go to only the selected place, never both.
+[MIT](LICENSE). Third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
