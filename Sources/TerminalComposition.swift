@@ -75,6 +75,21 @@ class ComposingTerminalView: TerminalView {
 
 final class ComposingProcessTerminalView: LocalProcessTerminalView {
     private let composition = TerminalComposition()
+    /// Called before typed input that follows mouse activity (scrolling or
+    /// selecting), so the session can leave tmux copy mode and take the input.
+    var leaveScrollback: (() -> Void)?
+    private var mouseActive = false
+
+    override func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        // SGR (ESC [ <) and X10 (ESC [ M) mouse reports go to tmux for scrolling.
+        if data.starts(with: [0x1b, 0x5b, 0x3c]) || data.starts(with: [0x1b, 0x5b, 0x4d]) {
+            mouseActive = true
+        } else if mouseActive {
+            mouseActive = false
+            leaveScrollback?()
+        }
+        super.send(source: source, data: data)
+    }
     override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
         super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
         composition.refresh(in: self, selectedRange: selectedRange)

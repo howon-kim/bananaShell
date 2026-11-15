@@ -191,6 +191,10 @@ struct NotchTerminalGroup: Equatable, Identifiable {
         terminal.nativeBackgroundColor = target.background
         terminal.nativeForegroundColor = NSColor(white: 0.93, alpha: 1)
         terminal.processDelegate = self
+        terminal.leaveScrollback = { [weak self] in
+            guard let self, let id = self.model.current else { return }
+            self.server()?.leaveCopyMode(id)
+        }
         surface.addSubview(terminal)
         self.terminal = terminal
         model.current = target.id

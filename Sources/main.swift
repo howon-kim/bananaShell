@@ -242,7 +242,7 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     private func releaseActivityFocus() { window.makeFirstResponder(activity) }
 
     private let themeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/bananaShell/TerminalSessions")
+        .appendingPathComponent("Library/Application Support/bananaShell/TerminalSessions" + PersistentTerminal.profileSuffix)
     private var terminalServer: PersistentTerminal?
     private var restoringWorkspace = false
     private var serial = 0
@@ -806,6 +806,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
             workspace.activityBoards.insert(slot, startingPage: startingPage)
             if workspace.selected == .activity { workspace.activityTerminal = serial }
             terminal.processDelegate = self
+            let persistentID = session.persistentID
+            terminal.leaveScrollback = { server.leaveCopyMode(persistentID) }
             if selecting { select(.shell(serial)) }
             terminal.startProcess(executable: server.executable.path, args: server.attachment(session.persistentID),
                                   environment: Terminal.getEnvironmentVariables(), currentDirectory: FileManager.default.homeDirectoryForCurrentUser.path)
@@ -1095,7 +1097,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
                 })
         }
         confirmations.retractQuestion = { [weak self] id in self?.completions.retract(id: id) }
-        confirmations.start()
+        // A separate profile must not answer or display the real automations.
+        if PersistentTerminal.profile == nil { confirmations.start() }
         notchTerminal.groups = { [weak self] in self?.notchWindow?.notchGroups ?? [] }
         notchTerminal.preferredTerminal = { [weak self] in self?.notchWindow?.lastTerminal }
         notchTerminal.server = { [weak self] in self?.terminalServer }
@@ -1110,7 +1113,7 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
                     for controller in self.windows where controller.isOpen { controller.saveWindow() }
                 }
                 self?.requestTerminalStatus()
-                self?.confirmations.poll()
+                if PersistentTerminal.profile == nil { self?.confirmations.poll() }
                 if let self, let directory = self.terminalServer?.directory {
                     for event in ClaudeCompletion.drain(directory.appendingPathComponent("completions")) {
                         for controller in self.windows where controller.isOpen {
@@ -1130,6 +1133,11 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
         if !CommandLine.arguments.contains("--automation-notification") {
             restoreWindows()
             AppUpdates.shared.start()
+            #if DEBUG
+            if CommandLine.arguments.contains("--show-notch-terminal") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.notchTerminal.toggle() }
+            }
+            #endif
         }
     }
 

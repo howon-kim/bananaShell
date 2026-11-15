@@ -30,9 +30,19 @@ struct PersistentTerminal: Sendable {
     var serviceLabel: String { "local.bananaShell.tmux." + socketName }
     private var serviceTarget: String { "gui/\(getuid())/" + serviceLabel }
 
+    /// `BANANASHELL_PROFILE=<name>` runs an isolated instance, e.g. for
+    /// screenshots or testing: its own tmux server, session folder (prompt
+    /// state, completions) and PromptSupport link, with automations disabled.
+    /// Launch it from a build with a different bundle ID to separate settings.
+    static let profile: String? = ProcessInfo.processInfo.environment["BANANASHELL_PROFILE"].flatMap {
+        $0.range(of: "^[A-Za-z0-9-]{1,32}$", options: .regularExpression) != nil ? $0 : nil
+    }
+    /// Appended to shared file names so a profile never touches the default instance's files.
+    static var profileSuffix: String { profile.map { "-" + $0 } ?? "" }
+
     init(directory: URL = FileManager.default.homeDirectoryForCurrentUser
-         .appendingPathComponent("Library/Application Support/bananaShell/TerminalSessions"),
-         socketName: String = "bananaShell-v1", executable: URL? = nil) throws {
+         .appendingPathComponent("Library/Application Support/bananaShell/TerminalSessions" + Self.profileSuffix),
+         socketName: String = "bananaShell-" + (Self.profile ?? "v1"), executable: URL? = nil) throws {
         self.directory = directory
         self.socketName = socketName
         let candidates = ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/opt/local/bin/tmux"]
@@ -265,6 +275,12 @@ struct PersistentTerminal: Sendable {
 
     func setScrollHold(_ enabled: Bool, for id: UUID) throws {
         try run(["set-option", "-p", "-t", Self.name(id), "@banana-hold-scroll", enabled ? "1" : "0"])
+    }
+
+    /// Leaves copy mode (scrollback or a selection) so typed input reaches the shell.
+    func leaveCopyMode(_ id: UUID) {
+        let target = Self.name(id)
+        _ = try? run(["if-shell", "-F", "-t", target, "#{pane_in_mode}", "send-keys -X -t \(target) cancel"])
     }
 
     func kill(_ id: UUID) throws {

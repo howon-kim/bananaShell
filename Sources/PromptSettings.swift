@@ -81,7 +81,7 @@ enum PromptSetup {
         guard let folder else { return nil }
         let fm = FileManager.default
         let parent = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/bananaShell")
-        let link = parent.appendingPathComponent("PromptSupport")
+        let link = parent.appendingPathComponent("PromptSupport" + PersistentTerminal.profileSuffix)
         if (try? fm.destinationOfSymbolicLink(atPath: link.path)) == folder.path { return link }
         let staging = parent.appendingPathComponent(".PromptSupport-" + UUID().uuidString)
         do {

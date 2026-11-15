@@ -56,7 +56,7 @@ final class AutomationOutputReader {
 // types (e.g. a password the command asks for) are forwarded to its PTY.
 private final class PlaybackTerminal: TerminalView {
     var forward: (([UInt8]) -> Void)?
-    private var typing = false
+    private(set) var typing = false
 
     /// Called from a key monitor before AppKit dispatches the key, so bytes the
     /// key produces count as typed; terminal reports that follow later do not.
@@ -68,12 +68,14 @@ private final class PlaybackTerminal: TerminalView {
         typing = true; defer { typing = false }
         super.paste(sender)
     }
-    nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {
-        let bytes = Array(data)
-        MainActor.assumeIsolated {
-            guard typing, let forward else { return }
-            forward(bytes)
-        }
+    // Replies the emulator generates while replaying output (cursor reports,
+    // device attributes) belong to the original run; drop them.
+    nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {}
+
+    /// Keyboard input arrives through the delegate; forward only real keystrokes.
+    func typed(_ data: ArraySlice<UInt8>) {
+        guard typing, let forward, !data.isEmpty else { return }
+        forward(Array(data))
     }
 }
 
@@ -194,7 +196,7 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
     func scrolled(source: TerminalView, position: Double) {}
     func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
-    func send(source: TerminalView, data: ArraySlice<UInt8>) {}
+    func send(source: TerminalView, data: ArraySlice<UInt8>) { (source as? PlaybackTerminal)?.typed(data) }
     func clipboardCopy(source: TerminalView, content: Data) {}
     func iTermContent(source: TerminalView, content: ArraySlice<UInt8>) {}
 }
