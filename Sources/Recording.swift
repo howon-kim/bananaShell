@@ -175,14 +175,14 @@ struct InputTape {
     }
     proc confirmNext {label} {
         global confirmationRE ready
-        expect -exact $ready {puts stderr "$label: missing confirmation"; exit 65} -re $confirmationRE {answer $expect_out(0,string)} timeout {puts stderr "$label: confirmation timeout"; exit 124} eof {exit 65}
+        expect -timeout -1 -exact $ready {puts stderr "$label: missing confirmation"; exit 65} -re $confirmationRE {answer $expect_out(0,string)} eof {exit 65}
     }
     proc need {anchor label {interactive 0}} {
         global ready confirmationRE
         binary scan $anchor c* octets; set pattern ""
         foreach b $octets {append pattern [format {\u%04x} [expr {$b & 255}]]}
         if {$interactive} {
-            expect -re $pattern {return} -exact $ready {puts stderr "$label: unexpected shell prompt"; exit 65} -re $confirmationRE {answer $expect_out(0,string); exp_continue} timeout {puts stderr "$label: context timeout"; exit 124} eof {exit 65}
+            expect -timeout -1 -re $pattern {return} -exact $ready {puts stderr "$label: unexpected shell prompt"; exit 65} -re $confirmationRE {answer $expect_out(0,string); exp_continue} eof {exit 65}
         } else {
             expect -re $pattern {return} -exact $ready {puts stderr "$label: unexpected shell prompt"; exit 65} timeout {exit 124} eof {exit 65}
         }
@@ -191,18 +191,21 @@ struct InputTape {
 
     private static let promptPatternLine = #"set confirmationRE {(?:[^\r\n\x1b]|\x1b\[[0-9;:]*m)*"# + String(choice.dropLast()) + #"(?:\x1b\[[0-9;:]*m[ \t]*)*(?:\r\n|\n|\r)?[ \t]*$}"#
 
-    // Older confirmation-aware jobs embed their dialog in the generated replay.
-    // Replace only that generated preamble, leaving commands and policy intact.
+    // Refresh the generated input-wait runtime in existing recordings as well.
+    // Replace only that preamble, leaving commands, anchors and policy intact.
     static func updatedDialog(in script: String) -> String? {
         guard script.contains("proc answer {raw}"), script.contains("proc confirmNext {label}"),
-              (script.contains("set dialog {on run argv") || script.contains("set expires [expr {[clock seconds] + 120}]")),
               let start = script.range(of: "\nset confirmationRE {"),
               let end = script.range(of: "\nsend -- [binary format H* {", range: start.upperBound..<script.endIndex)
         else { return nil }
         let replacement = "\n" + promptPatternLine + "\n" + confirmationRuntime
-        guard script[start.lowerBound..<end.lowerBound] != replacement else { return nil }
-        return String(script[..<start.lowerBound]) + replacement + String(script[end.lowerBound...])
+        var result = String(script[..<start.lowerBound]) + replacement + String(script[end.lowerBound...])
+        result = result.replacingOccurrences(of: legacyCompletionWait, with: completionWait)
+        return result == script ? nil : result
     }
+
+    private static let legacyCompletionWait = "expect eof {} -re $confirmationRE {answer $expect_out(0,string); exp_continue} timeout {puts stderr {shell exit timeout}; exit 124}"
+    private static let completionWait = "expect -timeout -1 eof {} -re $confirmationRE {answer $expect_out(0,string); exp_continue}"
 
     private static let terminalPreamble = #"""
     # bananaShell live terminal v1
@@ -230,6 +233,32 @@ struct InputTape {
     }
     set terminalSize {}
     watchTerminalSize
+    """# + "\n" + inputRuntime
+
+    // Keys typed into the live terminal (e.g. a password) arrive as owner-only
+    // files next to the replay. They go straight to the PTY: never recorded,
+    // and `send` is not written to the output log.
+    private static let inputRuntimeMarker = "proc forwardInput {} {"
+    private static let inputRuntime = #"""
+    proc inputFiles {} {
+        set base [info script]
+        lsort -dictionary [glob -nocomplain -directory [file dirname $base] -tails "[file tail $base].input.*"]
+    }
+    proc forwardInput {} {
+        global spawn_id
+        set dir [file dirname [info script]]
+        foreach name [inputFiles] {
+            set path [file join $dir $name]
+            if {[catch {
+                set f [open $path r]; fconfigure $f -translation binary; set data [read $f]; close $f
+            }]} {continue}
+            file delete -force $path
+            if {$data ne ""} {catch {send -- $data}}
+        }
+        after 50 forwardInput
+    }
+    foreach name [inputFiles] {file delete -force [file join [file dirname [info script]] $name]}
+    forwardInput
     """#
 
     // Upgrade only our generated replays. Commands, anchors, replies and the
@@ -237,6 +266,12 @@ struct InputTape {
     // binary spawn data as UTF-8. Its log channel honors stdout's binary
     // encoding, preserving the original PTY bytes (including split UTF-8).
     static func updatedTerminalOutput(in script: String) -> String? {
+        let watch = "set terminalSize {}\nwatchTerminalSize\n"
+        if script.hasPrefix(terminalPreamble), script.contains(watch) {
+            // Live terminal v1 replays gain keyboard input forwarding.
+            guard !script.contains(inputRuntimeMarker) else { return nil }
+            return script.replacingOccurrences(of: watch, with: watch + inputRuntime + "\n")
+        }
         let channel = "fconfigure $spawn_id -encoding binary -translation binary\n"
         let firstReady = "need $ready command-1 0\n"
         guard script.hasPrefix("set env(TERM) xterm-256color\n"),
@@ -292,7 +327,7 @@ struct InputTape {
                 k += 1
             }
         }
-        rows += ["expect eof {} -re $confirmationRE {answer $expect_out(0,string); exp_continue} timeout {puts stderr {shell exit timeout}; exit 124}", "set result [wait]",
+        rows += [Self.completionWait, "set result [wait]",
                  "if {[llength $result] != 4 || [lindex $result 2] != 0} {exit 1}", "exit [lindex $result 3]"]
         let result = rows.joined(separator: "\n") + "\n"
         return Self.updatedTerminalOutput(in: result) ?? result
@@ -300,7 +335,7 @@ struct InputTape {
 }
 
 // Terminal-generated replies go straight to the PTY, not into the recording.
-private final class CaptureTerminal: TerminalView {
+private final class CaptureTerminal: ComposingTerminalView {
     weak var transport: LocalProcess?
     nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {
         let bytes = Array(data)

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import SwiftTerm
+import Carbon
 
 /// Read only appended bytes. UTF-8 and escape sequences may span reads; the
 /// terminal parser, rather than a String conversion, retains that state.
@@ -43,6 +44,7 @@ final class AutomationOutputReader {
             chunk.reset = true
         }
         identity = current
+        guard end > position else { return chunk }
         try handle.seek(toOffset: position)
         chunk.bytes = try handle.read(upToCount: 256 * 1024) ?? Data()
         position += UInt64(chunk.bytes.count)
@@ -50,10 +52,29 @@ final class AutomationOutputReader {
     }
 }
 
-// Playback owns input. Selecting/copying/scrolling remain available, while
-// terminal reports and keystrokes cannot interfere with recorded responses.
+// Terminal reports never reach the replay. While a run is live, keys the user
+// types (e.g. a password the command asks for) are forwarded to its PTY.
 private final class PlaybackTerminal: TerminalView {
-    nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {}
+    var forward: (([UInt8]) -> Void)?
+    private var typing = false
+
+    /// Called from a key monitor before AppKit dispatches the key, so bytes the
+    /// key produces count as typed; terminal reports that follow later do not.
+    func beginKeystroke() {
+        typing = true
+        DispatchQueue.main.async { [weak self] in self?.typing = false }
+    }
+    override func paste(_ sender: Any) {
+        typing = true; defer { typing = false }
+        super.paste(sender)
+    }
+    nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {
+        let bytes = Array(data)
+        MainActor.assumeIsolated {
+            guard typing, let forward else { return }
+            forward(bytes)
+        }
+    }
 }
 
 @MainActor
@@ -63,14 +84,22 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
     private let reader: AutomationOutputReader
     private let sizeURL: URL?
     private var timer: Timer?
+    private var copyMonitor: Any?
     private var active = false
     private var lastSize = ""
 
-    init(outputURL: URL, offset: UInt64, sizeURL: URL?) {
+    private let inputURL: URL?
+    private var inputSequence = 0
+
+    /// `inputURL` is the replay script; typed keys are written beside it as `<script>.input.<n>`.
+    init(outputURL: URL, offset: UInt64, sizeURL: URL?, inputURL: URL? = nil) {
         reader = AutomationOutputReader(url: outputURL, offset: offset)
         self.sizeURL = sizeURL
-        terminal = PlaybackTerminal(frame: NSRect(x: 0, y: 0, width: 860, height: 360))
+        self.inputURL = inputURL
+        let playback = PlaybackTerminal(frame: NSRect(x: 0, y: 0, width: 860, height: 360))
+        terminal = playback
         super.init()
+        playback.forward = { [weak self] bytes in self?.sendInput(bytes) }
         terminal.font = terminalFont(size: 14)
         terminal.lineSpacing = 1.15
         terminal.nativeBackgroundColor = shellSurface
@@ -78,6 +107,28 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         terminal.allowMouseReporting = false
         terminal.terminalDelegate = self
         terminal.setAccessibilityLabel("Automation terminal output")
+        copyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self else { return event }
+                if self.handleCopyShortcut(event) { return nil }
+                if let window = self.terminal.window, window.firstResponder === self.terminal,
+                   event.windowNumber == window.windowNumber {
+                    (self.terminal as? PlaybackTerminal)?.beginKeystroke()
+                }
+                return event
+            }
+        }
+    }
+
+    // Intercept before terminal key handling clears the selection. Physical
+    // key matching also works when a Korean input source is selected.
+    func handleCopyShortcut(_ event: NSEvent) -> Bool {
+        guard let window = terminal.window, window.firstResponder === terminal,
+              event.windowNumber == window.windowNumber,
+              event.type == .keyDown, event.keyCode == UInt16(kVK_ANSI_C),
+              event.modifierFlags.intersection([.command, .control, .option, .shift]) == .command else { return false }
+        terminal.copy(terminal)
+        return true
     }
 
     func start(active: Bool) {
@@ -86,14 +137,17 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         readOutput()
         publishSize()
         let timer = Timer(timeInterval: active ? 0.1 : 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.readOutput() }
+            MainActor.assumeIsolated { self?.readOutput() }
         }
         self.timer = timer
         RunLoop.main.add(timer, forMode: .common)
     }
 
     func stop() { timer?.invalidate(); timer = nil }
-    deinit { timer?.invalidate() }
+    deinit {
+        timer?.invalidate()
+        if let copyMonitor { NSEvent.removeMonitor(copyMonitor) }
+    }
 
     func readOutput() {
         do {
@@ -101,8 +155,27 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
             if chunk.reset { terminal.feed(text: "\u{1b}c") }
             if chunk.omitted { terminal.feed(text: "Earlier output omitted.\r\n") }
             if !chunk.bytes.isEmpty { terminal.feed(byteArray: Array(chunk.bytes)[...]) }
-            failure = nil
-        } catch { failure = error.localizedDescription }
+            if failure != nil { failure = nil }
+        } catch {
+            let message = error.localizedDescription
+            if failure != message { failure = message }
+        }
+    }
+
+    /// Hands typed bytes to the running replay through owner-only files it polls and deletes.
+    func sendInput(_ bytes: [UInt8]) {
+        guard active, let inputURL, !bytes.isEmpty else { return }
+        inputSequence += 1
+        let name = String(format: "%@.input.%019llu-%06d", inputURL.lastPathComponent,
+                          UInt64(Date().timeIntervalSince1970 * 1_000_000), inputSequence)
+        let folder = inputURL.deletingLastPathComponent()
+        let staging = folder.appendingPathComponent("." + name + ".tmp")
+        let fm = FileManager.default
+        guard fm.createFile(atPath: staging.path, contents: Data(bytes), attributes: [.posixPermissions: 0o600]) else {
+            failure = "Could not send input to the automation."; return
+        }
+        do { try fm.moveItem(at: staging, to: folder.appendingPathComponent(name)) }
+        catch { try? fm.removeItem(at: staging); failure = "Could not send input to the automation." }
     }
 
     private func publishSize() {
@@ -130,8 +203,8 @@ struct AutomationConsole: View {
     @StateObject private var session: AutomationTerminalSession
     let active: Bool
 
-    init(outputURL: URL, offset: UInt64, sizeURL: URL?, active: Bool) {
-        _session = StateObject(wrappedValue: AutomationTerminalSession(outputURL: outputURL, offset: offset, sizeURL: sizeURL))
+    init(outputURL: URL, offset: UInt64, sizeURL: URL?, inputURL: URL? = nil, active: Bool) {
+        _session = StateObject(wrappedValue: AutomationTerminalSession(outputURL: outputURL, offset: offset, sizeURL: sizeURL, inputURL: inputURL))
         self.active = active
     }
 

@@ -1,7 +1,9 @@
 // Link with the SwiftTerm.o and SwiftTerm module produced by the Xcode build.
 import AppKit
+import Combine
 import SwiftUI
 import SwiftTerm
+import UserNotifications
 
 let shellSurface = NSColor(srgbRed: 0.075, green: 0.082, blue: 0.10, alpha: 1)
 func terminalFont(size: CGFloat) -> NSFont { .monospacedSystemFont(ofSize: size, weight: .regular) }
@@ -10,6 +12,17 @@ func terminalFont(size: CGFloat) -> NSFont { .monospacedSystemFont(ofSize: size,
 struct AutomationTerminalChecks {
     @MainActor static func main() throws {
         NSApplication.shared.setActivationPolicy(.prohibited)
+        let target = UUID()
+        let label = "local.bananaShell.job." + target.uuidString
+        precondition(AutomationNotificationRoute.resolve(action: UNNotificationDefaultActionIdentifier, jobLabel: label) == .open(target))
+        precondition(AutomationNotificationRoute.resolve(action: UNNotificationDismissActionIdentifier, jobLabel: label) == nil)
+        precondition(AutomationNotificationRoute.resolve(action: "option-1", jobLabel: label) == .answer(1))
+        let pane = UUID()
+        precondition(AutomationNotificationRoute.resolve(action: UNNotificationDefaultActionIdentifier, jobLabel: nil, pane: pane.uuidString) == .terminal(pane))
+        precondition(AutomationNotificationRoute.resolve(action: "option--1", jobLabel: label) == nil)
+        for invalid in [nil, "", "other." + target.uuidString, "local.bananaShell.job.bad"] as [String?] {
+            precondition(AutomationNotificationRoute.resolve(action: UNNotificationDefaultActionIdentifier, jobLabel: invalid) == nil)
+        }
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("banana-automation-check-" + UUID().uuidString)
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
@@ -44,6 +57,32 @@ struct AutomationTerminalChecks {
         precondition(text(session.terminal).contains("✔︎ 설치 중"), "Split UTF-8 was corrupted")
         precondition(text(session.terminal).contains("완료") && !text(session.terminal).contains("진행 10%"), "CR/erase redraw was appended as a log line")
 
+        // Copy must work without a menu and with a non-English input layout,
+        // before TerminalView's key handling can clear the selection.
+        let savedClipboard: [NSPasteboardItem] = NSPasteboard.general.pasteboardItems?.map { item in
+            let saved = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { saved.setData(data, forType: type) }
+            }
+            return saved
+        } ?? []
+        defer {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.writeObjects(savedClipboard)
+        }
+        let copyWindow = NSWindow(contentRect: session.terminal.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        copyWindow.contentView = session.terminal
+        precondition(copyWindow.makeFirstResponder(session.terminal))
+        session.terminal.selectAll(nil)
+        let copyKey = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command,
+                                      timestamp: 0, windowNumber: copyWindow.windowNumber, context: nil,
+                                      characters: "ㅊ", charactersIgnoringModifiers: "ㅊ", isARepeat: false, keyCode: 8)!
+        precondition(session.handleCopyShortcut(copyKey))
+        precondition(NSPasteboard.general.string(forType: .string)?.contains("✔︎ 설치 중") == true)
+        precondition(session.handleCopyShortcut(copyKey))
+        precondition(NSPasteboard.general.string(forType: .string)?.contains("완료") == true)
+        copyWindow.contentView = nil
+
         // Restarts skip old output; truncation and replacement reset the screen.
         let reader = AutomationOutputReader(url: stream, offset: UInt64(display.count))
         try check(reader.read().bytes.isEmpty)
@@ -55,6 +94,12 @@ struct AutomationTerminalChecks {
         try Data("replacement".utf8).write(to: stream, options: .atomic)
         let replaced = try reader.read()
         precondition(replaced.reset && replaced.bytes == Data("replacement".utf8))
+        try Data().write(to: stream)
+        let emptied = try reader.read()
+        precondition(emptied.reset && emptied.bytes.isEmpty, "An empty truncation must still reset the terminal")
+        try check(!reader.read().reset)
+        try append(Data("resumed".utf8), to: stream)
+        try check(reader.read().bytes == Data("resumed".utf8))
         let missing = root.appendingPathComponent("later.log")
         let lateReader = AutomationOutputReader(url: missing, offset: 0)
         try check(lateReader.read().bytes.isEmpty)
@@ -69,6 +114,28 @@ struct AutomationTerminalChecks {
         for _ in 0..<4 { total += try largeReader.read().bytes.count }
         precondition(total == 1024 * 1024, "Historical output was not bounded")
 
+        // Idle polls must not invalidate SwiftUI. Errors publish once, and a
+        // successful retry clears the error while continuing to display output.
+        var idleUpdates = 0
+        let idleObserver = session.objectWillChange.sink { idleUpdates += 1 }
+        for _ in 0..<100 { session.readOutput() }
+        precondition(idleUpdates == 0, "Unchanged output published redundant UI updates")
+        idleObserver.cancel()
+
+        let unavailable = root.appendingPathComponent("recover.log")
+        try fm.createSymbolicLink(atPath: unavailable.path, withDestinationPath: unavailable.lastPathComponent)
+        let recovering = AutomationTerminalSession(outputURL: unavailable, offset: 0, sizeURL: nil)
+        var errorUpdates = 0
+        let errorObserver = recovering.objectWillChange.sink { errorUpdates += 1 }
+        for _ in 0..<10 { recovering.readOutput() }
+        precondition(recovering.failure != nil && errorUpdates == 1, "Repeated errors should publish only once")
+        try fm.removeItem(at: unavailable)
+        try Data("Recovered".utf8).write(to: unavailable)
+        recovering.readOutput()
+        settle()
+        precondition(recovering.failure == nil && errorUpdates == 2 && text(recovering.terminal).contains("Recovered"))
+        errorObserver.cancel()
+
         // Run a real disposable Expect PTY, never Homebrew or a saved user job.
         try Data("PROMPT='%# '; RPROMPT=''\n".utf8).write(to: root.appendingPathComponent(".zshrc"))
         let command = #"printf '\033[2J\033[H\033[32m✔︎ 설치 중\033[0m\r\n'; printf '\r진행 10%%'; sleep 0.3; printf '\r\033[2K완료\r\n'; /bin/stty size; sleep 1; /bin/stty size"#
@@ -78,10 +145,15 @@ struct AutomationTerminalChecks {
         precondition(InputTape.updatedTerminalOutput(in: script) == nil, "Migration must be idempotent")
         var legacy = String(script[script.range(of: "set env(TERM)")!.lowerBound...])
         let runtimeStart = legacy.range(of: "proc updateTerminalSize {}")!.lowerBound
-        let runtimeEnd = legacy.range(of: "\nwatchTerminalSize\n")!.upperBound
+        let runtimeEnd = legacy.range(of: "\nforwardInput\n")!.upperBound
         legacy.removeSubrange(runtimeStart..<runtimeEnd)
         legacy = legacy.replacingOccurrences(of: "log_file -a -leaveopen stdout\n", with: "")
         precondition(InputTape.updatedTerminalOutput(in: legacy) == script, "Existing commands changed during migration")
+        // Live terminal v1 replays (without keyboard input) gain input forwarding only.
+        let inputStart = script.range(of: "proc inputFiles {}")!.lowerBound
+        let inputEnd = script.range(of: "\nforwardInput\n")!.upperBound
+        var v1 = script; v1.removeSubrange(inputStart..<inputEnd)
+        precondition(InputTape.updatedTerminalOutput(in: v1) == script, "v1 replay was not upgraded with input forwarding")
         let scheduler = JobScheduler(home: root, control: { _ in })
         let job = ScheduledJob(id: UUID(), name: "Disposable test", command: command, directory: root.path,
                                hour: 9, minute: 0, hourly: false, recording: tape, policy: .ask)

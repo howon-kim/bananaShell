@@ -1,0 +1,4 @@
+module BananaZstd {
+    header "BananaZstd.h"
+    export *
+}

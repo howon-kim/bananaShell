@@ -40,7 +40,11 @@ _banana_render() {
       fi
       return 0 ;;
     starship|oh-my-posh)
-      bin=${commands[$mode]}
+      if [[ $value == *$'\n'* ]]; then
+        bin=${value#*$'\n'}
+        value=${value%%$'\n'*}
+      fi
+      [[ -x $bin ]] || bin=${commands[$mode]}
       [[ -x $bin ]] || bin=/opt/homebrew/bin/$mode
       [[ -x $bin ]] || bin=/usr/local/bin/$mode
       if [[ ! -x $bin ]]; then

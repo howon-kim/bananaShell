@@ -1,3 +1,5 @@
+import BananaZstd
+import CryptoKit
 import AppKit
 import SwiftUI
 
@@ -10,9 +12,21 @@ private enum Palette: String, CaseIterable {
 private enum ThemeLibrary: String, CaseIterable {
     case builtin = "Built-in", posh = "Oh My Posh", starship = "Starship"
     var engine: String { self == .posh ? "oh-my-posh" : "starship" }
+    var dependency: PromptEngine? { self == .builtin ? nil : self == .posh ? .posh : .starship }
     var files: [URL] {
-        guard self != .builtin, let folder = PromptSetup.folder else { return [] }
-        let urls = (try? FileManager.default.contentsOfDirectory(at: folder.appendingPathComponent(rawValue), includingPropertiesForKeys: nil)) ?? []
+        switch self {
+        case .builtin: return []
+        case .posh: return Self.poshFiles
+        case .starship: return Self.starshipFiles
+        }
+    }
+    // Bundled themes cannot change while the app is running. Each library is
+    // scanned and sorted once, rather than once per card on every UI update.
+    private static let poshFiles = loadFiles(in: .posh)
+    private static let starshipFiles = loadFiles(in: .starship)
+    private static func loadFiles(in library: ThemeLibrary) -> [URL] {
+        guard let folder = PromptSetup.folder else { return [] }
+        let urls = (try? FileManager.default.contentsOfDirectory(at: folder.appendingPathComponent(library.rawValue), includingPropertiesForKeys: nil)) ?? []
         return urls.filter { ["json", "yaml", "toml"].contains($0.pathExtension) }.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
     }
     func title(_ url: URL) -> String { url.deletingPathExtension().lastPathComponent.replacingOccurrences(of: ".omp", with: "") }
@@ -51,14 +65,36 @@ private enum PromptDesign: String, CaseIterable {
 }
 
 enum PromptSetup {
-    static var folder: URL? {
+    static let folder: URL? = {
         #if SWIFT_PACKAGE
         let bundle = Bundle.module
         #else
         let bundle = Bundle.main
         #endif
         return bundle.url(forResource: "PromptSupport", withExtension: nil)
-    }
+    }()
+
+    /// Persistent shells outlive the build that created them. Give them a stable
+    /// path that each launch repoints at the running bundle, so `claude` always
+    /// uses the current launcher and hooks instead of an old or deleted build's.
+    static let shellFolder: URL? = {
+        guard let folder else { return nil }
+        let fm = FileManager.default
+        let parent = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/bananaShell")
+        let link = parent.appendingPathComponent("PromptSupport")
+        if (try? fm.destinationOfSymbolicLink(atPath: link.path)) == folder.path { return link }
+        let staging = parent.appendingPathComponent(".PromptSupport-" + UUID().uuidString)
+        do {
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+            try fm.createSymbolicLink(atPath: staging.path, withDestinationPath: folder.path)
+            // rename(2) swaps the link atomically for shells reading it concurrently.
+            guard rename(staging.path, link.path) == 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+            return link
+        } catch {
+            try? fm.removeItem(at: staging)
+            return folder
+        }
+    }()
 
     private static let backgrounds: [String: String] = {
         guard let url = folder?.appendingPathComponent("theme-backgrounds.json"),
@@ -92,7 +128,8 @@ enum PromptSetup {
         if library != .builtin {
             let files = library.files
             guard let file = files.first(where: { $0.lastPathComponent == prefs.string(forKey: "themeFile." + library.rawValue) }) ?? files.first else { return "off\n" }
-            return library.engine + "\n" + file.path
+            let binary = PromptEngineTools().executable(library.engine, preferred: prefs.string(forKey: "enginePath." + library.rawValue))
+            return library.engine + "\n" + file.path + "\n" + (binary?.path ?? "")
         }
         let color = Palette(rawValue: prefs.string(forKey: "promptPalette") ?? "") ?? .violet
         let identity = prefs.object(forKey: "promptIdentity") as? Bool ?? true
@@ -104,19 +141,34 @@ enum PromptSetup {
 
 struct PromptSettings: View {
     let didChange: () -> Void
-    @AppStorage("restoreLastWindow") private var restoreLastWindow = false
+    let engineTools: PromptEngineTools
+    @AppStorage("restoreLastWindow") private var restoreLastWindow = true
+    @AppStorage(AlertDestination.storageKey) private var alertDestination = AlertDestination.notch
     @AppStorage("powerline") private var enabled = false
     @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
     @AppStorage("promptIdentity") private var identity = true
     @AppStorage("promptDesign") private var design = PromptDesign.classic
-    @AppStorage("themeLibrary") private var library = ThemeLibrary.builtin
+    @AppStorage("themeLibrary") private var appliedLibrary = ThemeLibrary.builtin
     @AppStorage("customAccent") private var customAccent = ""
     @AppStorage("themeFile.Oh My Posh") private var poshFile = ""
     @AppStorage("themeFile.Starship") private var starshipFile = ""
-    @AppStorage("followThemeAccent") private var followThemeAccent = true
     @AppStorage("followThemeBackground") private var followBackground = true
+    @AppStorage("followThemeAccent") private var followThemeAccent = true
     @State private var search = ""
     @State private var hexDraft = ""
+    @State private var library = ThemeLibrary.builtin
+    @State private var pendingInstallation: ThemeChoice?
+
+    private struct ThemeChoice: Identifiable {
+        let id = UUID()
+        let library: ThemeLibrary
+        let file: URL?
+        var title: String { file.map { library.title($0) } ?? library.rawValue }
+    }
+
+    init(engineTools: PromptEngineTools = PromptEngineTools(), didChange: @escaping () -> Void) {
+        self.engineTools = engineTools; self.didChange = didChange
+    }
 
     private let accent = Color.accentColor
     private var tint: Color { RGB(customAccent)?.color ?? (Palette(rawValue: palette) ?? .violet).color }
@@ -151,6 +203,8 @@ struct PromptSettings: View {
                                 libraryPicker
                                 preferences
                                 startup
+                                notifications
+                                ShellPluginSettings()
                                 ShortcutSettings()
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(width: inspectorWidth)
@@ -168,6 +222,8 @@ struct PromptSettings: View {
                     VStack(alignment: .leading, spacing: 24) {
                         header
                         startup
+                        notifications
+                        ShellPluginSettings()
                         ShortcutSettings()
                         preview
                         if enabled {
@@ -191,17 +247,49 @@ struct PromptSettings: View {
                 }
             }
         }
-        .onAppear { hexDraft = customAccent }
+        .onAppear { hexDraft = customAccent; library = appliedLibrary }
         .onChange(of: library) { _ in search = "" }
-        .onChange(of: [String(enabled), palette, String(identity), design.rawValue, library.rawValue,
-                       customAccent, poshFile, starshipFile, String(followBackground)]) { _ in didChange() }
+        .onChange(of: [String(enabled), palette, String(identity), design.rawValue,
+                       customAccent, String(followBackground)]) { _ in didChange() }
+        .sheet(item: $pendingInstallation) { choice in
+            if let engine = choice.library.dependency {
+                PromptEngineInstallView(engine: engine, theme: choice.title, tools: engineTools) { binary in
+                    apply(choice, binary: binary)
+                    pendingInstallation = nil
+                }
+            }
+        }
+    }
+
+    private func choose(_ choice: ThemeChoice) {
+        guard let engine = choice.library.dependency else { apply(choice); return }
+        let savedPath = UserDefaults.standard.string(forKey: "enginePath." + choice.library.rawValue)
+        if let binary = engineTools.executable(engine.rawValue, preferred: savedPath) { apply(choice, binary: binary) }
+        else { pendingInstallation = choice }
+    }
+
+    private func choice(for library: ThemeLibrary) -> ThemeChoice {
+        let name = library == .posh ? poshFile : starshipFile
+        return ThemeChoice(library: library, file: library.files.first { $0.lastPathComponent == name } ?? library.files.first)
+    }
+
+    private func apply(_ choice: ThemeChoice, binary: URL? = nil) {
+        if let binary { UserDefaults.standard.set(binary.path, forKey: "enginePath." + choice.library.rawValue) }
+        if let file = choice.file {
+            if choice.library == .posh { poshFile = file.lastPathComponent }
+            else if choice.library == .starship { starshipFile = file.lastPathComponent }
+        }
+        appliedLibrary = choice.library
+        library = choice.library
+        enabled = true
+        didChange()
     }
 
     private var startup: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle("Startup")
-            preferenceRow("Reopen last window on launch",
-                          detail: "Restore window size, tabs, and folders with fresh shells.",
+            preferenceRow("Restore window size and position",
+                          detail: "Terminals and running processes always reconnect when you reopen the app.",
                           value: $restoreLastWindow)
                 .settingsSurface(accent: accent)
         }
@@ -210,14 +298,45 @@ struct PromptSettings: View {
         }
     }
 
+    private var notifications: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Show alerts in")
+            HStack(spacing: 8) {
+                ForEach(AlertDestination.allCases) { item in
+                    Button { alertDestination = item } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: item == .notch ? "laptopcomputer" : "bell.badge")
+                                Spacer(minLength: 0)
+                                if alertDestination == item { Image(systemName: "checkmark.circle.fill") }
+                            }.font(.system(size: 13)).foregroundStyle(alertDestination == item ? accent : .secondary)
+                            Text(item.title).font(.system(size: 12, weight: .semibold))
+                                .lineLimit(1).minimumScaleFactor(0.8)
+                            Text(item == .notch ? "Cards at the top of the screen" : "macOS banners and alerts")
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+                        }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                         .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile))
+                     .settingsSurface(selected: alertDestination == item, accent: accent)
+                     .accessibilityAddTraits(alertDestination == item ? .isSelected : [])
+                }
+            }
+            Text("Claude completions and automation questions appear in one place only.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Settings").font(.title.bold())
-                Text("Startup, shortcuts, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
+                Text("Startup, notifications, shortcuts, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
             }
             Spacer(minLength: 12)
-            Toggle("Custom prompt", isOn: $enabled)
+            Toggle("Custom prompt", isOn: Binding(get: { enabled }, set: { value in
+                if value { choose(choice(for: appliedLibrary)) }
+                else { enabled = false }
+            }))
                 .font(.callout).toggleStyle(.switch).controlSize(.small).fixedSize()
         }
     }
@@ -257,7 +376,7 @@ struct PromptSettings: View {
             sectionTitle("Theme library")
             HStack(spacing: 8) {
                 ForEach(ThemeLibrary.allCases, id: \.self) { item in
-                    Button { library = item } label: {
+                    Button { library = item; choose(choice(for: item)) } label: {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: item == .builtin ? "slider.horizontal.3" : item == .posh ? "sparkles" : "star")
@@ -372,6 +491,7 @@ struct PromptSettings: View {
 
     private var themeGallery: some View {
         let matches = files.filter { search.isEmpty || library.title($0).localizedCaseInsensitiveContains(search) }
+        let selected = selectedFile
         return VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack {
@@ -384,10 +504,8 @@ struct PromptSettings: View {
                     themeSearch
                 }
             }
-            Text("Requires " + library.engine + " · Colors and layout are defined by each theme.")
-                .font(.caption).foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 12)], spacing: 12) {
-                ForEach(matches, id: \.self) { file in themeCard(file) }
+                ForEach(matches, id: \.self) { file in themeCard(file, selected: selected == file) }
             }
             if matches.isEmpty {
                 VStack(spacing: 8) {
@@ -412,12 +530,10 @@ struct PromptSettings: View {
          .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tab).strokeBorder(.white.opacity(0.08)))
     }
 
-    private func themeCard(_ file: URL) -> some View {
-        let selected = selectedFile == file
+    private func themeCard(_ file: URL, selected: Bool) -> some View {
         let background = PromptSetup.background(file: file, follow: followBackground, accent: NSColor(tint))
         return Button {
-            if library == .posh { poshFile = file.lastPathComponent }
-            else { starshipFile = file.lastPathComponent }
+            choose(ThemeChoice(library: library, file: file))
         } label: {
             VStack(alignment: .leading, spacing: 0) {
                 Group {
@@ -649,6 +765,9 @@ final class CreationKeys: ObservableObject {
 
     func key(_ action: String) -> String { overrides[action] ?? Self.defaults[action]! }
     func modifier(_ action: String) -> NavigationModifier { modifiers[action].flatMap(NavigationModifier.init) ?? .command }
+    var windowKey: String {
+        Self.actions.contains { key($0) == "n" && modifier($0) == .command } ? "" : "n"
+    }
     var isDefault: Bool { Self.actions.allSatisfy { key($0) == Self.defaults[$0] && modifier($0) == .command } }
     func set(_ letter: String, modifier: NavigationModifier, for action: String) -> String? {
         if modifier == .command && "acvwxzqhm".contains(letter) { return "That shortcut is reserved for editing or window controls." }
@@ -665,6 +784,7 @@ final class CreationKeys: ObservableObject {
         UserDefaults.standard.set(overrides, forKey: "creationCommandLetters")
         UserDefaults.standard.set(modifiers, forKey: "creationCommandModifiers")
         let menu = NSApp.mainMenu?.item(withTitle: "Shell")?.submenu
+        menu?.item(withTitle: "New Window")?.keyEquivalent = windowKey
         for action in Self.actions {
             let item = menu?.item(withTitle: "New " + action)
             item?.keyEquivalent = key(action)
@@ -676,9 +796,10 @@ final class CreationKeys: ObservableObject {
 private struct ShortcutSettings: View {
     @ObservedObject private var creation = CreationKeys.shared
     @ObservedObject private var navigation = NavigationKeys.shared
+    @ObservedObject private var notch = NotchTerminalKey.shared
     private let keyWidth: CGFloat = 80
 
-    private enum Column { case create, select }
+    private enum Column { case create, select, notch }
     private struct Target: Equatable { let scope: ShortcutScope; let column: Column }
     @State private var recording: Target?
     @State private var monitor: Any?
@@ -689,9 +810,9 @@ private struct ShortcutSettings: View {
             HStack {
                 Text("Keyboard shortcuts").settingsSectionTitle()
                 Spacer()
-                Button("Restore defaults") { stop(); creation.reset(); navigation.reset() }
+                Button("Restore defaults") { stop(); creation.reset(); navigation.reset(); notch.reset() }
                     .controlSize(.small)
-                    .disabled(navigation.isDefault && creation.isDefault)
+                    .disabled(navigation.isDefault && creation.isDefault && notch.isDefault)
             }
             VStack(spacing: 0) {
                 HStack {
@@ -709,11 +830,26 @@ private struct ShortcutSettings: View {
                         let name = scope.rawValue
                         keycap(creation.modifier(name).symbol + creation.key(name).uppercased(), Target(scope: scope, column: .create))
                         keycap(navigation.modifier(scope).symbol + " 1–0", Target(scope: scope, column: .select))
+                            .help("Select by position in the current " + (scope == .group ? "window." : scope == .page ? "group." : "page.") + " Numbers follow the tab order.")
                     }
                     .padding(.horizontal, 12).padding(.vertical, 7)
                 }
                 Divider()
-                Text(message ?? (recording == nil ? "Click a keycap, then press your shortcut." : "Press ⌘, ⌥ or ⌃ with " + (recording?.column == .create ? "a letter." : "a number. Shared modifiers swap rows.") + " Esc cancels."))
+                HStack {
+                    Image(systemName: "rectangle.topthird.inset.filled").foregroundStyle(Color.accentColor).frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Notch terminal").font(.callout)
+                        Text("Works from any app").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 4)
+                    keycap(notch.current.display, Target(scope: .terminal, column: .notch), width: keyWidth * 2 + 8)
+                        .help("Show or hide the notch terminal from any app.")
+                }
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                Divider()
+                Text(message ?? (recording == nil ? "Click a keycap, then press your shortcut." : recording?.column == .notch
+                    ? "Press a key with ⌘, ⌥ or ⌃ (⇧ optional). Esc cancels."
+                    : "Press ⌘, ⌥ or ⌃ with " + (recording?.column == .create ? "a letter." : "a number. Shared modifiers swap rows.") + " Esc cancels."))
                     .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }.settingsSurface()
         }
@@ -721,7 +857,7 @@ private struct ShortcutSettings: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
     }
 
-    private func keycap(_ value: String, _ target: Target) -> some View {
+    private func keycap(_ value: String, _ target: Target, width: CGFloat? = nil) -> some View {
         let active = recording == target
         return Button {
             if active { stop() } else { start(target) }
@@ -729,12 +865,13 @@ private struct ShortcutSettings: View {
             Text(verbatim: active ? "Press keys…" : value)
                 .font(TabTypography.suite(size: 12, relativeTo: .callout))
                 .foregroundStyle(active ? Color.accentColor : Color.primary)
-                .frame(width: keyWidth, height: 26, alignment: .center)
+                .frame(width: width ?? keyWidth, height: 26, alignment: .center)
                 .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: SurfaceRadius.control))
                 .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.control).strokeBorder(active ? Color.accentColor : .clear))
         }
         .buttonStyle(HoverButtonStyle())
-        .accessibilityLabel((target.column == .create ? "Create " : "Select ") + target.scope.rawValue + " shortcut")
+        .accessibilityLabel(target.column == .notch ? "Notch terminal shortcut"
+            : (target.column == .create ? "Create " : "Select ") + target.scope.rawValue + " shortcut")
         .accessibilityValue(active ? "Recording" : value)
     }
 
@@ -751,6 +888,11 @@ private struct ShortcutSettings: View {
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown]) { event in
             guard event.type == .keyDown else { stop(); return event }
             if event.keyCode == 53 { stop(); return nil }
+            if target.column == .notch {
+                if let error = notch.set(keyCode: event.keyCode, flags: event.modifierFlags) { message = error; return nil }
+                stop()
+                return nil
+            }
             let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
             guard let modifier = NavigationModifier.allCases.first(where: { $0.flags == flags }) else {
                 message = "Use one modifier: ⌘, ⌥ or ⌃. Esc cancels."
@@ -763,6 +905,7 @@ private struct ShortcutSettings: View {
                     return nil
                 }
                 navigation.assign(modifier, to: target.scope)
+            case .notch: break
             case .create:
                 guard let letter = event.characters(byApplyingModifiers: [])?.lowercased(), letter.count == 1,
                       letter.first?.isASCII == true, letter.first?.isLetter == true else {
@@ -776,6 +919,155 @@ private struct ShortcutSettings: View {
             }
             stop()
             return nil
+        }
+    }
+}
+
+private enum ShellPlugin: String, CaseIterable, Identifiable {
+    case suggestions = "zsh-autosuggestions", corrections = "pay-respects"
+    var id: String { rawValue }
+    var detail: String {
+        self == .suggestions ? "Suggest commands from history as you type. Press → to accept."
+            : "Type f after a failed command to review suggested fixes."
+    }
+    var folder: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("bananaShell/Plugins").appendingPathComponent(rawValue)
+    }
+    var entry: URL { folder.appendingPathComponent(self == .suggestions ? rawValue + ".zsh" : rawValue) }
+    var installed: Bool {
+        self == .suggestions ? FileManager.default.isReadableFile(atPath: entry.path)
+            : FileManager.default.isExecutableFile(atPath: entry.path)
+    }
+
+    func install() throws {
+        let fm = FileManager.default
+        let parent = folder.deletingLastPathComponent()
+        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let staging = parent.appendingPathComponent(UUID().uuidString)
+        defer { try? fm.removeItem(at: staging) }
+        switch self {
+        case .suggestions:
+            try run("/usr/bin/git", ["clone", "--quiet", "--depth", "1", "--branch", "v0.7.1",
+                                     "https://github.com/zsh-users/zsh-autosuggestions.git", staging.path])
+        case .corrections:
+            #if arch(arm64)
+            let arch = "aarch64", digest = "ba11712db3dac2d4548abf4747186751636962271fdcda44d078463dde47e158"
+            #else
+            let arch = "x86_64", digest = "0754726c1b504cfd471eaf3d0aad8ba763201902f0394ad774f65633712f95ac"
+            #endif
+            let archive = parent.appendingPathComponent(UUID().uuidString + ".tar.zst")
+            defer { try? fm.removeItem(at: archive) }
+            let asset = "pay-respects-0.9.0-" + arch + "-apple-darwin.tar.zst"
+            try run("/usr/bin/curl", ["--disable", "--fail", "--silent", "--show-error", "--location",
+                                      "--proto", "=https", "--max-time", "120", "-o", archive.path,
+                                      "https://github.com/iffse/pay-respects/releases/download/v0.9.0/" + asset])
+            let compressed = try Data(contentsOf: archive)
+            let checksum = SHA256.hash(data: compressed).map { String(format: "%02x", $0) }.joined()
+            guard checksum == digest else { throw CocoaError(.fileReadCorruptFile) }
+            try fm.createDirectory(at: staging, withIntermediateDirectories: false)
+            // Finder-launched apps cannot rely on tar finding an external zstd.
+            // The pinned releases expand to less than 32 MiB on both architectures.
+            var tar = Data(count: 32 * 1024 * 1024)
+            let size = tar.withUnsafeMutableBytes { destination in
+                compressed.withUnsafeBytes { source in
+                    ZSTD_decompress(destination.baseAddress, destination.count, source.baseAddress, source.count)
+                }
+            }
+            guard ZSTD_isError(size) == 0 else { throw CocoaError(.fileReadCorruptFile) }
+            tar.count = size
+            let plainArchive = archive.deletingPathExtension()
+            defer { try? fm.removeItem(at: plainArchive) }
+            try tar.write(to: plainArchive)
+            try run("/usr/bin/tar", ["-xf", plainArchive.path, "-C", staging.path, "pay-respects", "LICENSE"])
+            try run(staging.appendingPathComponent("pay-respects").path, ["--version"])
+        }
+        guard fm.isReadableFile(atPath: staging.appendingPathComponent(entry.lastPathComponent).path)
+        else { throw CocoaError(.fileReadNoSuchFile) }
+        try fm.moveItem(at: staging, to: folder)
+    }
+
+    private func run(_ executable: String, _ arguments: [String]) throws {
+        let process = Process(), log = Pipe()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice
+        process.standardError = log
+        process.environment = ProcessInfo.processInfo.environment.merging(["GIT_TERMINAL_PROMPT": "0"]) { _, new in new }
+        try process.run()
+        let output = log.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            let message = String(decoding: output.suffix(1600), as: UTF8.self)
+            throw NSError(domain: "ShellPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: message.isEmpty ? "Download failed. Check your connection and try again." : message])
+        }
+    }
+}
+
+enum ShellPluginStartup {
+    static var environment: [String] {
+        ShellPlugin.allCases.compactMap { plugin in
+            guard UserDefaults.standard.bool(forKey: "plugin." + plugin.id), plugin.installed else { return nil }
+            let key = plugin == .suggestions ? "BANANA_AUTOSUGGESTIONS" : "BANANA_PAY_RESPECTS"
+            return key + "=" + plugin.entry.path
+        }
+    }
+}
+
+@MainActor
+private final class PluginCatalog: ObservableObject {
+    static let shared = PluginCatalog()
+    @Published var installing: String?
+    @Published var failure: String?
+    func install(_ plugin: ShellPlugin) {
+        guard installing == nil else { return }
+        installing = plugin.id
+        failure = nil
+        Task {
+            defer { installing = nil }
+            do {
+                try await Task.detached { try plugin.install() }.value
+                UserDefaults.standard.set(true, forKey: "plugin." + plugin.id)
+            } catch { failure = plugin.id + ": " + error.localizedDescription }
+        }
+    }
+}
+
+private struct ShellPluginSettings: View {
+    @ObservedObject private var catalog = PluginCatalog.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Terminal plugins").font(.headline)
+            ForEach(ShellPlugin.allCases) { plugin in
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text(plugin.id).font(.callout.bold())
+                        Text(plugin.detail).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if plugin.installed {
+                        PluginSwitch(plugin: plugin)
+                    } else {
+                        Button(catalog.installing == plugin.id ? "Installing…" : "Install") { catalog.install(plugin) }
+                            .disabled(catalog.installing != nil)
+                    }
+                }.padding(10).settingsSurface()
+            }
+            if let failure = catalog.failure { Text(failure).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
+        }
+    }
+
+    private struct PluginSwitch: View {
+        let plugin: ShellPlugin
+        @AppStorage var enabled: Bool
+        init(plugin: ShellPlugin) {
+            self.plugin = plugin
+            _enabled = AppStorage(wrappedValue: false, "plugin." + plugin.id)
+        }
+        var body: some View {
+            Toggle("Enabled", isOn: $enabled).toggleStyle(.switch).labelsHidden()
+                .accessibilityLabel("Enable " + plugin.id)
         }
     }
 }

@@ -126,6 +126,8 @@ struct JobScheduler {
     private var logFolder: URL { home.appendingPathComponent("Library/Logs/bananaShell") }
     func logURL(_ job: ScheduledJob) -> URL { logFolder.appendingPathComponent(job.label + ".log") }
     func terminalSizeURL(_ job: ScheduledJob) -> URL { replayURL(job).appendingPathExtension("size") }
+    /// The live terminal writes typed keys beside this replay script.
+    func terminalInputURL(_ job: ScheduledJob) -> URL { replayURL(job) }
 
     func outputEnd(_ job: ScheduledJob) throws -> UInt64 {
         do {
@@ -305,11 +307,13 @@ struct JobScheduler {
 
 struct AutomationPanel: View {
     let addRequest: PassthroughSubject<Void, Never>
+    let openRequest: CurrentValueSubject<UUID?, Never>
     private let scheduler: JobScheduler
     private let runningLabels: () throws -> Set<String>
-    init(addRequest: PassthroughSubject<Void, Never>, scheduler: JobScheduler = .init(),
+    init(addRequest: PassthroughSubject<Void, Never>, openRequest: CurrentValueSubject<UUID?, Never> = .init(nil), scheduler: JobScheduler = .init(),
          runningLabels: @escaping () throws -> Set<String> = JobScheduler.runningLabels) {
         self.addRequest = addRequest
+        self.openRequest = openRequest
         self.scheduler = scheduler
         self.runningLabels = runningLabels
     }
@@ -403,10 +407,9 @@ struct AutomationPanel: View {
                             && previous.map { end > $0 } == true
                         if started || completedBetweenPolls {
                             logStarts[key] = previous ?? 0
-                            selection = job.id
-                            showingDetail = true
+                            if selection == nil { selection = job.id; showingDetail = true }
                         }
-                        observedEnds[key] = end
+                        if previous != end { observedEnds[key] = end }
                     }
                     if labels != running { running = labels }
                     let requests = Set(jobs.filter { labels.contains($0.label) && scheduler.pendingQuestion($0) != nil }.map(\.label))
@@ -414,6 +417,21 @@ struct AutomationPanel: View {
                 } catch { self.error = error.localizedDescription }
                 do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { break }
             }
+        }
+        .onReceive(openRequest.compactMap { $0 }) { id in
+            // CurrentValueSubject retains a click delivered before this view mounts.
+            openRequest.send(nil)
+            do {
+                jobs = try scheduler.jobs()
+                guard jobs.contains(where: { $0.id == id }) else {
+                    error = "This automation no longer exists."
+                    return
+                }
+                query = ""
+                selection = id
+                showingDetail = true
+                error = nil
+            } catch { self.error = error.localizedDescription }
         }
         .onReceive(addRequest) { adding = true }
         .sheet(isPresented: $adding) { JobEditor { job in
@@ -834,12 +852,16 @@ private struct AutomationRun: View {
             HStack(spacing: 6) {
                 Circle().fill(active ? Color.green : Color.secondary).frame(width: 6, height: 6)
                 Text(active ? "Live terminal" : "Terminal output").font(.caption.weight(.medium))
+                if active && job.policy != nil {
+                    Text("· Click and type to send input").font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Text((job.directory as NSString).abbreviatingWithTildeInPath)
                     .font(TabTypography.path(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             AutomationConsole(outputURL: scheduler.logURL(job), offset: offset,
                               sizeURL: job.policy != nil ? scheduler.terminalSizeURL(job) : nil,
+                              inputURL: job.policy != nil ? scheduler.terminalInputURL(job) : nil,
                               active: active)
                 .frame(height: terminalHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -887,61 +909,169 @@ private struct AutomationRun: View {
 
 import UserNotifications
 
+/// Where bananaShell shows its system alerts: Claude completions and automation questions.
+/// Exactly one destination is used at a time, so an alert never appears in both places.
+enum AlertDestination: String, CaseIterable, Identifiable {
+    case notch, notificationCenter
+    static let storageKey = "alertDestination"
+    static var current: Self {
+        UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .notch
+    }
+    var id: String { rawValue }
+    var title: String { self == .notch ? "Notch" : "Notification Center" }
+}
+
+enum AutomationNotificationRoute: Equatable {
+    case open(UUID), answer(Int), terminal(UUID)
+
+    static func resolve(action: String, jobLabel: String?, pane: String? = nil) -> Self? {
+        if action == UNNotificationDefaultActionIdentifier {
+            if let pane, let id = UUID(uuidString: pane) { return .terminal(id) }
+            let prefix = "local.bananaShell.job."
+            guard let jobLabel, jobLabel.hasPrefix(prefix),
+                  let id = UUID(uuidString: String(jobLabel.dropFirst(prefix.count))) else { return nil }
+            return .open(id)
+        }
+        if action.hasPrefix("option-"), let index = Int(action.dropFirst(7)), index >= 0 { return .answer(index) }
+        return nil
+    }
+}
+
+struct AutomationQuestion: Equatable {
+    let id: String
+    let jobLabel: String
+    let nonce: String
+    let name: String
+    let question: String
+    let options: [String]
+}
+
+/// Delivers automation questions and Claude completions to the destination chosen
+/// in Settings: the notch (default) or Notification Center, never both.
 final class AutomationNotifications: NSObject, UNUserNotificationCenterDelegate {
+    @MainActor var openAutomation: ((UUID) -> Void)?
+    @MainActor var openTerminal: ((UUID) -> Void)?
+    @MainActor var presentQuestion: ((AutomationQuestion) -> Void)?
+    @MainActor var retractQuestion: ((String) -> Void)?
+
     private let scheduler = JobScheduler()
-    private var live: [String: UNNotificationCategory] = [:]
     private let center = UNUserNotificationCenter.current()
-    private var posting = false
+    /// Questions currently presented, by job label and nonce, and where they were shown.
+    private var shown: Set<String> = []
+    private var shownIn: AlertDestination = .notch
+    private var categories: [String: UNNotificationCategory] = [:]
 
     func start() {
         center.delegate = self
+        // Ask for badges up front: the dock count for finished Claude replies needs it.
+        Task { _ = try? await center.requestAuthorization(options: [.alert, .badge]) }
         _ = try? scheduler.jobs() // Upgrade existing recorded jobs before their next launch.
         poll()
     }
 
     func poll() {
-        guard !posting else { return }
         let folder = scheduler.home.appendingPathComponent("Library/Application Support/bananaShell/Recordings")
         let pending = (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.filter { $0.hasSuffix(".exp.pending") } ?? []
-        var requests: [UNNotificationRequest] = []
-        var current: Set<String> = []
+        var questions: [AutomationQuestion] = []
         if !pending.isEmpty {
             guard let jobs = try? scheduler.jobs() else { return }
             for job in jobs where pending.contains(job.label + ".exp.pending") {
                 guard let q = scheduler.pendingQuestion(job) else { continue }
-                let id = job.label + "." + q.nonce
-                current.insert(id)
-                guard live[id] == nil else { continue }
-                let actions = q.options.enumerated().map {
-                    UNNotificationAction(identifier: "option-" + String($0.offset), title: $0.element, options: [])
-                }
-                live[id] = UNNotificationCategory(identifier: id, actions: actions, intentIdentifiers: [], options: [])
-                let content = UNMutableNotificationContent()
-                content.title = job.name
-                content.body = InputTape.Prompt(q.question)?.question ?? q.question
-                content.categoryIdentifier = id
-                content.userInfo = ["job": job.label, "nonce": q.nonce]
-                requests.append(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+                questions.append(AutomationQuestion(id: job.label + "." + q.nonce, jobLabel: job.label, nonce: q.nonce, name: job.name,
+                                                    question: InputTape.Prompt(q.question)?.question ?? q.question, options: q.options))
             }
         }
-        let stale = Set(live.keys).subtracting(current)
-        guard !requests.isEmpty || !stale.isEmpty else { return }
-        for id in stale { live.removeValue(forKey: id) }
-        center.setNotificationCategories(Set(live.values))
-        guard !requests.isEmpty else { return }
-        posting = true
-        Task { @MainActor in
-            defer { posting = false }
+        let destination = AlertDestination.current
+        if destination != shownIn {
+            // The setting changed: withdraw everything from the old place and show it again in the new one.
+            retract(shown, from: shownIn)
+            shown = []
+            shownIn = destination
+        }
+        let current = Set(questions.map(\.id))
+        let stale = shown.subtracting(current)
+        let fresh = questions.filter { !shown.contains($0.id) }
+        shown = current
+        guard !stale.isEmpty || !fresh.isEmpty else { return }
+        retract(stale, from: destination)
+        switch destination {
+        case .notch:
+            // Questions appear in the notch with their answer buttons; poll runs on the main thread.
+            MainActor.assumeIsolated { for question in fresh { presentQuestion?(question) } }
+        case .notificationCenter:
+            post(fresh)
+        }
+    }
+
+    private func retract(_ ids: Set<String>, from destination: AlertDestination) {
+        guard !ids.isEmpty else { return }
+        switch destination {
+        case .notch:
+            MainActor.assumeIsolated { for id in ids { retractQuestion?(id) } }
+        case .notificationCenter:
+            center.removeDeliveredNotifications(withIdentifiers: Array(ids))
+            center.removePendingNotificationRequests(withIdentifiers: Array(ids))
+            for id in ids { categories.removeValue(forKey: id) }
+            center.setNotificationCategories(Set(categories.values))
+        }
+    }
+
+    /// Posts questions to Notification Center with one action button per answer.
+    private func post(_ questions: [AutomationQuestion]) {
+        guard !questions.isEmpty else { return }
+        var requests: [UNNotificationRequest] = []
+        for q in questions {
+            let actions = q.options.enumerated().map {
+                UNNotificationAction(identifier: "option-" + String($0.offset), title: $0.element, options: [])
+            }
+            categories[q.id] = UNNotificationCategory(identifier: q.id, actions: actions, intentIdentifiers: [], options: [])
+            let content = UNMutableNotificationContent()
+            content.title = q.name
+            content.subtitle = "Automation · Needs input"
+            content.body = q.question
+            content.categoryIdentifier = q.id
+            content.userInfo = ["job": q.jobLabel, "nonce": q.nonce]
+            requests.append(UNNotificationRequest(identifier: q.id, content: content, trigger: nil))
+        }
+        center.setNotificationCategories(Set(categories.values))
+        Task {
             do {
-                guard try await center.requestAuthorization(options: [.alert]) else { return }
-                for request in requests {
-                    let info = request.content.userInfo
-                    guard let job = try scheduler.jobs().first(where: { $0.label == info["job"] as? String }),
-                          let q = scheduler.pendingQuestion(job), q.nonce == info["nonce"] as? String else { continue }
-                    try await center.add(request)
-                }
+                guard try await center.requestAuthorization(options: [.alert, .badge]) else { return }
+                for request in requests { try await center.add(request) }
             } catch { NSLog("Automation notification: %@", error.localizedDescription) }
         }
+    }
+
+    /// A finished Claude response, shown in Notification Center instead of the notch.
+    func postCompletion(title: String, summary: String?, source: ClaudeCompletion.Source, pane: UUID) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.subtitle = source.announcement
+        content.body = summary ?? "Check the terminal for the result"
+        content.userInfo = ["pane": pane.uuidString]
+        let request = UNNotificationRequest(identifier: "completion." + UUID().uuidString, content: content, trigger: nil)
+        Task {
+            do {
+                guard try await center.requestAuthorization(options: [.alert, .badge]) else { return }
+                try await center.add(request)
+            } catch { NSLog("Completion notification: %@", error.localizedDescription) }
+        }
+    }
+
+    /// Opens the automation that asked, from a notch card or a delivered notification.
+    @MainActor func open(jobLabel: String) {
+        if case .open(let id)? = AutomationNotificationRoute.resolve(action: UNNotificationDefaultActionIdentifier, jobLabel: jobLabel) {
+            openAutomation?(id)
+        }
+    }
+
+    /// Answers only the exact question that was shown, so a late click can't answer a newer one.
+    func respond(jobLabel: String?, nonce: String?, index: Int) {
+        guard let jobs = try? scheduler.jobs(), let job = jobs.first(where: { $0.label == jobLabel }),
+              let question = scheduler.pendingQuestion(job), question.nonce == nonce,
+              question.options.indices.contains(index) else { return }
+        do { try scheduler.respond(question.options[index], to: question, for: job) }
+        catch { NSLog("Automation response: %@", error.localizedDescription) }
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
@@ -951,15 +1081,24 @@ final class AutomationNotifications: NSObject, UNUserNotificationCenterDelegate 
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completion: @escaping () -> Void) {
-        defer { completion() }
         let info = response.notification.request.content.userInfo
-        let action = response.actionIdentifier
-        guard action.hasPrefix("option-"), let index = Int(action.dropFirst(7)),
-              let jobs = try? scheduler.jobs(), let job = jobs.first(where: { $0.label == info["job"] as? String }),
-              let question = scheduler.pendingQuestion(job), question.nonce == info["nonce"] as? String,
-              question.options.indices.contains(index) else { return }
-        do { try scheduler.respond(question.options[index], to: question, for: job) }
-        catch { NSLog("Automation response: %@", error.localizedDescription) }
+        let label = info["job"] as? String
+        let nonce = info["nonce"] as? String
+        let route = AutomationNotificationRoute.resolve(action: response.actionIdentifier, jobLabel: label,
+                                                        pane: info["pane"] as? String)
+        Task { @MainActor in
+            defer { completion() }
+            switch route {
+            case .open(let id):
+                // A body click opens the job even after its question has been answered.
+                openAutomation?(id)
+            case .terminal(let id):
+                openTerminal?(id)
+            case .answer(let index):
+                respond(jobLabel: label, nonce: nonce, index: index)
+            case nil: break
+            }
+        }
     }
 }
 
