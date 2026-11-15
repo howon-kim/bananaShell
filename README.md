@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="https://decultureware.com/apps/bananashell"><b>Website</b></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/howon-kim/bananaShell/releases/latest"><img src="https://img.shields.io/github/v/release/howon-kim/bananaShell?label=release&color=f5c518" alt="Latest release"></a>
   <a href="https://github.com/howon-kim/bananaShell/releases"><img src="https://img.shields.io/github/downloads/howon-kim/bananaShell/total?color=f5c518" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple" alt="macOS 13+">
