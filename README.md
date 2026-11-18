@@ -10,7 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="https://decultureware.com/apps/bananashell"><b>Website</b></a>
+  <a href="https://decultureware.com/apps/bananashell"><b>Website</b></a> ·
+  <a href="https://github.com/sponsors/howon-kim"><b>Sponsor</b></a>
 </p>
 
 <p align="center">
@@ -18,6 +19,7 @@
   <a href="https://github.com/howon-kim/bananaShell/releases"><img src="https://img.shields.io/github/downloads/howon-kim/bananaShell/total?color=f5c518" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-black?logo=apple" alt="macOS 13+">
   <img src="https://img.shields.io/badge/Apple-notarized-black?logo=apple" alt="Notarized by Apple">
+  <a href="https://github.com/sponsors/howon-kim"><img src="https://img.shields.io/github/sponsors/howon-kim?label=sponsors&logo=githubsponsors&color=ea4aaa" alt="GitHub Sponsors"></a>
   <a href="https://github.com/howon-kim/homebrew-tap"><img src="https://img.shields.io/badge/homebrew-cask-orange?logo=homebrew" alt="Homebrew cask"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/howon-kim/bananaShell" alt="MIT license"></a>
 </p>
