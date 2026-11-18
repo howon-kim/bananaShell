@@ -58,6 +58,15 @@ If Homebrew says the tap is untrusted, run `brew trust howon-kim/tap` first.
 - [Guide](docs/GUIDE.md): every feature and shortcut in detail
 - [Releasing](docs/RELEASING.md): for maintainers
 
+## Sponsors
+
+bananaShell is free and built in my spare time. [Sponsoring](https://github.com/sponsors/howon-kim) keeps every release signed, notarized and maintained.
+Sponsors at the **Bunch** tier ($8/month) and above are listed here, and **Tree** sponsors ($25/month) are also thanked in each release's notes.
+
+<!-- sponsors:start -->
+No sponsors yet. [Be the first](https://github.com/sponsors/howon-kim) 🍌
+<!-- sponsors:end -->
+
 ## License
 
 [MIT](LICENSE). Third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
