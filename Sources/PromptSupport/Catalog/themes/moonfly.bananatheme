@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "moonfly",
+  "name": "Moonfly",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/bluz71/vim-moonfly-colors",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Moonfly",
+    "background": "#080808",
+    "foreground": "#BDBDBD",
+    "cursor": "#9E9E9E",
+    "selection": "#B2CEEE",
+    "ansi": [
+      "#323437",
+      "#FF5454",
+      "#8CC85F",
+      "#E3C78A",
+      "#80A0FF",
+      "#CF87E8",
+      "#79DAC8",
+      "#C6C6C6",
+      "#949494",
+      "#FF5189",
+      "#36C692",
+      "#C6C684",
+      "#74B2FF",
+      "#AE81FF",
+      "#85DC85",
+      "#E4E4E4"
+    ]
+  }
+}

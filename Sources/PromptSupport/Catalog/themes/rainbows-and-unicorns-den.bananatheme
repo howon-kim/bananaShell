@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-den",
+  "name": "Rainbows and Unicorns Den",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Den",
+    "background": "#1E150D",
+    "foreground": "#EBD9B8",
+    "cursor": "#E0A030",
+    "selection": "#E0A030",
+    "ansi": [
+      "#2E2115",
+      "#D9583B",
+      "#9DB85C",
+      "#E0A030",
+      "#6F9FB8",
+      "#B87A9A",
+      "#7FB0A0",
+      "#CDBB98",
+      "#7D6A50",
+      "#D98036",
+      "#BBD47E",
+      "#F0BE5C",
+      "#95BDD2",
+      "#D29CB8",
+      "#A2CDBF",
+      "#FFF3DA"
+    ]
+  }
+}

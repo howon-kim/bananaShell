@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gitlab-dark",
+  "name": "GitLab Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/albertorestifo/gitlab-webide-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "GitLab Dark",
+    "background": "#28262B",
+    "foreground": "#FFFFFF",
+    "cursor": "#FFFFFF",
+    "selection": "#AD95E9",
+    "ansi": [
+      "#000000",
+      "#F57F6C",
+      "#52B87A",
+      "#D99530",
+      "#7FB6ED",
+      "#F88AAF",
+      "#32C5D2",
+      "#FFFFFF",
+      "#666666",
+      "#FCB5AA",
+      "#91D4A8",
+      "#E9BE74",
+      "#498DD1",
+      "#FCACC5",
+      "#5EDEE3",
+      "#FFFFFF"
+    ]
+  }
+}

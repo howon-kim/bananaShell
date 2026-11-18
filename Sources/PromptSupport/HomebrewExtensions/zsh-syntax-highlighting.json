@@ -1,0 +1,11 @@
+{
+  "name": "zsh-syntax-highlighting",
+  "license": "BSD-3-Clause",
+  "versions": { "stable": "0.8.0" },
+  "urls": {
+    "stable": {
+      "url": "https://github.com/zsh-users/zsh-syntax-highlighting/archive/refs/tags/0.8.0.tar.gz",
+      "checksum": "5981c19ebaab027e356fe1ee5284f7a021b89d4405cc53dc84b476c3aee9cc32"
+    }
+  }
+}

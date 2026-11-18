@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-parchment-light",
+  "name": "Lumina Parchment Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Parchment Light",
+    "background": "#F9EFDA",
+    "foreground": "#352516",
+    "cursor": "#352516",
+    "selection": "#D4BE95",
+    "ansi": [
+      "#352516",
+      "#912918",
+      "#2D7341",
+      "#654935",
+      "#2E5FB0",
+      "#87418E",
+      "#006E81",
+      "#7B6858",
+      "#706251",
+      "#6B281C",
+      "#195E2F",
+      "#5F2F00",
+      "#284D8A",
+      "#6B3770",
+      "#005868",
+      "#9B8776"
+    ]
+  }
+}

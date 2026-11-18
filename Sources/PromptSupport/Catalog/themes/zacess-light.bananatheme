@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-light",
+  "name": "Zacess Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zacess Light",
+    "background": "#FFFFFF",
+    "foreground": "#111111",
+    "cursor": "#111111",
+    "selection": "#0150B2",
+    "ansi": [
+      "#111111",
+      "#CA010E",
+      "#01751C",
+      "#885A00",
+      "#005FCC",
+      "#B301AE",
+      "#026F6F",
+      "#484848",
+      "#4D4D4D",
+      "#E90112",
+      "#008722",
+      "#9D6902",
+      "#006EED",
+      "#CF01C7",
+      "#028181",
+      "#111111"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-sorbet",
+  "name": "Rainbows and Unicorns Sorbet",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Sorbet",
+    "background": "#241B2F",
+    "foreground": "#F3E8F5",
+    "cursor": "#FF9EB5",
+    "selection": "#D7B3FF",
+    "ansi": [
+      "#3A2D48",
+      "#FF9EB5",
+      "#A8E6C3",
+      "#FFE8A3",
+      "#A7C7FF",
+      "#D7B3FF",
+      "#9FE8E6",
+      "#E4D6EC",
+      "#8A789E",
+      "#FFBE98",
+      "#C6F3D9",
+      "#FFF2C7",
+      "#C7DBFF",
+      "#E8D1FF",
+      "#C5F4F2",
+      "#FFFFFF"
+    ]
+  }
+}

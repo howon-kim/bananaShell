@@ -17,6 +17,7 @@ struct ScheduledJob: Identifiable {
     let hourly: Bool
     var recording: InputTape? = nil
     var policy: ConfirmationPolicy? = nil
+    var needsOutputUpgrade = false
     var schedule: String {
         hourly ? String(format: "Hourly at :%02d", minute) : String(format: "Daily at %02d:%02d", hour, minute)
     }
@@ -79,6 +80,26 @@ struct JobScheduler {
     private var agents: URL { home.appendingPathComponent("Library/LaunchAgents") }
     private var domain: String { "gui/\(getuid())" }
     private func file(_ job: ScheduledJob) -> URL { agents.appendingPathComponent(job.label + ".plist") }
+    // Publish an empty file before starting the command. A reader can identify a new
+    // run even when it finishes between polls with exactly the same number of bytes.
+    private static let outputLauncher = #"""
+    log=$1
+    shift
+    fresh=$(/usr/bin/mktemp "${log}.XXXXXXXX") || exit 1
+    exec >"$fresh"
+    /bin/mv -f "$fresh" "$log" || { /bin/rm -f "$fresh"; exit 1; }
+    exec "$@" 2>&1
+    """#
+    private static let launcherName = "bananaShell-automation"
+    private func launchArguments(_ command: [String], for job: ScheduledJob) -> [String] {
+        ["/bin/sh", "-c", Self.outputLauncher, Self.launcherName, logURL(job).path] + command
+    }
+    private func commandArguments(_ arguments: [String]) -> [String] {
+        if arguments.count > 5, arguments[0] == "/bin/sh", arguments[3] == Self.launcherName {
+            return Array(arguments.dropFirst(5))
+        }
+        return arguments
+    }
     private static func launchError(_ message: String, code: Int = 1) -> NSError {
         NSError(domain: "bananaShell.scheduler", code: code, userInfo: [NSLocalizedDescriptionKey: message])
     }
@@ -103,11 +124,12 @@ struct JobScheduler {
             guard let id = UUID(uuidString: String(label.dropFirst("local.bananaShell.job.".count))),
                   let p = try PropertyListSerialization.propertyList(from: Data(contentsOf: url), format: nil) as? [String: Any],
                   p["Label"] as? String == label, let name = p["Comment"] as? String,
-                  let args = p["ProgramArguments"] as? [String],
-                  (args.count == 3 || (args.count == 2 && args.first == "/usr/bin/expect")),
+                  let arguments = p["ProgramArguments"] as? [String],
                   let directory = p["WorkingDirectory"] as? String,
                   let time = p["StartCalendarInterval"] as? [String: Int], let minute = time["Minute"] else { return nil }
-            var job = ScheduledJob(id: id, name: name, command: args.count == 3 ? args[2] : (p["bananaShellCommand"] as? String ?? "Terminal recording"), directory: directory, hour: time["Hour"] ?? 0, minute: minute, hourly: time["Hour"] == nil)
+            let args = commandArguments(arguments)
+            guard args.count == 3 || (args.count == 2 && args.first == "/usr/bin/expect") else { return nil }
+            var job = ScheduledJob(id: id, name: name, command: args.count == 3 ? args[2] : (p["bananaShellCommand"] as? String ?? "Terminal recording"), directory: directory, hour: time["Hour"] ?? 0, minute: minute, hourly: time["Hour"] == nil, needsOutputUpgrade: args == arguments)
             if p["bananaShellConfirmation"] as? Bool == true {
                 let replay = replayURL(job)
                 if args == ["/usr/bin/expect", replay.path], let old = try? String(contentsOf: replay, encoding: .utf8) {
@@ -129,12 +151,11 @@ struct JobScheduler {
     /// The live terminal writes typed keys beside this replay script.
     func terminalInputURL(_ job: ScheduledJob) -> URL { replayURL(job) }
 
-    func outputEnd(_ job: ScheduledJob) throws -> UInt64 {
+    func outputFileID(_ job: ScheduledJob) throws -> UInt64? {
         do {
-            let handle = try FileHandle(forReadingFrom: logURL(job))
-            defer { try? handle.close() }
-            return try handle.seekToEnd()
-        } catch let error as NSError where error.domain == NSCocoaErrorDomain && [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains(error.code) { return 0 }
+            let attributes = try FileManager.default.attributesOfItem(atPath: logURL(job).path)
+            return (attributes[.systemFileNumber] as? NSNumber)?.uint64Value
+        } catch let error as NSError where error.domain == NSCocoaErrorDomain && [NSFileNoSuchFileError, NSFileReadNoSuchFileError].contains(error.code) { return nil }
     }
 
     /// Limit each refresh to the end of the file, even for long-running jobs.
@@ -203,7 +224,7 @@ struct JobScheduler {
             arguments = ["/usr/bin/expect", replay.path]
         }
         var plist: [String: Any] = ["Label": job.label, "Comment": job.name,
-            "ProgramArguments": arguments, "WorkingDirectory": job.directory,
+            "ProgramArguments": launchArguments(arguments, for: job), "WorkingDirectory": job.directory,
             "StartCalendarInterval": job.hourly ? ["Minute": job.minute] : ["Hour": job.hour, "Minute": job.minute],
             "StandardOutPath": log, "StandardErrorPath": log]
         if let tape = job.recording { plist["bananaShellCommand"] = tape.summary; plist["bananaShellConfirmation"] = true }
@@ -241,22 +262,48 @@ struct JobScheduler {
             guard !tape.commands.isEmpty, job.policy != nil else { throw Self.launchError("Record a command first.") }
             changes.append((replayURL(job), Data(tape.script(jobName: job.name).utf8)))
             plist["bananaShellCommand"] = tape.summary
-        } else if let args = plist["ProgramArguments"] as? [String], args.count == 3 {
-            plist["ProgramArguments"] = [args[0], args[1], job.command]
         }
+        guard let arguments = plist["ProgramArguments"] as? [String] else { throw Self.launchError("Invalid automation command.") }
+        var command = commandArguments(arguments)
+        if command.count == 3 { command[2] = job.command }
+        plist["ProgramArguments"] = launchArguments(command, for: job)
         if let policy = job.policy { changes.append((policyURL(job), Data(policy.rawValue.utf8))) }
         changes.append((url, try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)))
+        try replaceFiles(changes, for: job, registered: true)
+    }
+
+    // Existing LaunchAgents keep their loaded arguments until re-registered.
+    // Let an active run finish and keep an unloaded job unloaded.
+    func upgradeOutput(for jobs: [ScheduledJob], readRegistrations: () throws -> [String: Bool] = JobScheduler.registrations) throws -> Bool {
+        let legacy = jobs.filter(\.needsOutputUpgrade)
+        guard !legacy.isEmpty else { return true }
+        let registrations = try readRegistrations()
+        var finished = true
+        for job in legacy {
+            if registrations[job.label] == true { finished = false; continue }
+            let url = file(job)
+            guard var plist = try PropertyListSerialization.propertyList(from: Data(contentsOf: url), format: nil) as? [String: Any],
+                  let args = plist["ProgramArguments"] as? [String], args == commandArguments(args) else { continue }
+            plist["ProgramArguments"] = launchArguments(args, for: job)
+            let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            try replaceFiles([(url, data)], for: job, registered: registrations[job.label] != nil)
+        }
+        return finished
+    }
+
+    private func replaceFiles(_ changes: [(URL, Data)], for job: ScheduledJob, registered: Bool) throws {
+        let url = file(job)
         let backups = try changes.map { (file, _) in
             (file, FileManager.default.fileExists(atPath: file.path) ? try Data(contentsOf: file) : nil)
         }
-        try control(["bootout", domain + "/" + job.label])
+        if registered { try control(["bootout", domain + "/" + job.label]) }
         func write(_ data: Data, _ file: URL) throws {
             try data.write(to: file, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         }
         do {
             for (file, data) in changes { try write(data, file) }
-            try control(["bootstrap", domain, url.path])
+            if registered { try control(["bootstrap", domain, url.path]) }
         } catch {
             let cause = error
             do {
@@ -264,13 +311,14 @@ struct JobScheduler {
                     if let data { try write(data, file) }
                     else if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
                 }
-                try control(["bootstrap", domain, url.path])
+                if registered { try control(["bootstrap", domain, url.path]) }
             } catch { throw Self.launchError("Update failed: " + cause.localizedDescription + ". Could not restore the previous schedule: " + error.localizedDescription) }
             throw cause
         }
     }
 
     func runNow(_ job: ScheduledJob) throws {
+        if job.needsOutputUpgrade, try !upgradeOutput(for: [job]) { return }
         try control(["kickstart", domain + "/" + job.label])
     }
     func stopCurrentRun(_ job: ScheduledJob) throws {
@@ -279,6 +327,9 @@ struct JobScheduler {
 
     // One read covers both manually and periodically started agents.
     static func runningLabels() throws -> Set<String> {
+        Set(try registrations().filter(\.value).keys)
+    }
+    private static func registrations() throws -> [String: Bool] {
         let task = Process(), pipe = Pipe()
         task.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         task.arguments = ["list"]
@@ -287,12 +338,13 @@ struct JobScheduler {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         task.waitUntilExit()
         guard task.terminationStatus == 0 else { throw launchError("Could not read automation status.") }
-        return Set(String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline).compactMap { line in
+        var registrations: [String: Bool] = [:]
+        for line in String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline) {
             let fields = line.split(maxSplits: 2, whereSeparator: \.isWhitespace)
-            guard fields.count == 3, let pid = Int32(fields[0]), pid > 0,
-                  fields[2].hasPrefix("local.bananaShell.job.") else { return nil }
-            return String(fields[2])
-        })
+            guard fields.count == 3, fields[2].hasPrefix("local.bananaShell.job.") else { continue }
+            registrations[String(fields[2])] = (Int32(fields[0]) ?? 0) > 0
+        }
+        return registrations
     }
     func remove(_ job: ScheduledJob) throws {
         do { try control(["bootout", domain + "/" + job.label]) }
@@ -306,13 +358,11 @@ struct JobScheduler {
 }
 
 struct AutomationPanel: View {
-    let addRequest: PassthroughSubject<Void, Never>
     let openRequest: CurrentValueSubject<UUID?, Never>
     private let scheduler: JobScheduler
     private let runningLabels: () throws -> Set<String>
-    init(addRequest: PassthroughSubject<Void, Never>, openRequest: CurrentValueSubject<UUID?, Never> = .init(nil), scheduler: JobScheduler = .init(),
+    init(openRequest: CurrentValueSubject<UUID?, Never> = .init(nil), scheduler: JobScheduler = .init(),
          runningLabels: @escaping () throws -> Set<String> = JobScheduler.runningLabels) {
-        self.addRequest = addRequest
         self.openRequest = openRequest
         self.scheduler = scheduler
         self.runningLabels = runningLabels
@@ -320,8 +370,7 @@ struct AutomationPanel: View {
     @State private var jobs: [ScheduledJob] = []
     @State private var running: Set<String> = []
     @State private var waiting: Set<String> = []
-    @State private var observedEnds: [String: UInt64] = [:]
-    @State private var logStarts: [String: UInt64] = [:]
+    @State private var outputFiles: [String: UInt64] = [:]
     @State private var query = ""
     @State private var selection: UUID?
     @State private var showingDetail = false
@@ -353,10 +402,12 @@ struct AutomationPanel: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                }
+                    Button { adding = true } label: { Label("Add Automation", systemImage: "plus") }
+                        .fixedSize()
+                }.padding(.trailing, jobs.isEmpty || (narrow && !showingDetail) ? 0 : 20)
                 if let error { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled).padding(.trailing, 20) }
                 if jobs.isEmpty {
-                    emptyState("No automations yet", message: "Use + in the tab bar to record and schedule commands.", icon: "clock.arrow.circlepath")
+                    emptyState("No automations yet", message: "Choose Add Automation to record and schedule commands.", icon: "clock.arrow.circlepath")
                 } else {
                     HStack(alignment: .top, spacing: 16) {
                         if !narrow || !showingDetail {
@@ -399,17 +450,14 @@ struct AutomationPanel: View {
                     guard !Task.isCancelled else { break }
                     for job in jobs {
                         let key = job.label
-                        let end = try scheduler.outputEnd(job)
-                        let previous = observedEnds[key]
+                        let fileID = try scheduler.outputFileID(job)
+                        let replaced = fileID != outputFiles[key]
                         let started = labels.contains(key) && !running.contains(key)
-                        // A scheduled job can finish entirely between status polls.
-                        let completedBetweenPolls = !labels.contains(key) && !running.contains(key)
-                            && previous.map { end > $0 } == true
-                        if started || completedBetweenPolls {
-                            logStarts[key] = previous ?? 0
-                            if selection == nil { selection = job.id; showingDetail = true }
+                        if selection == nil && (started || (replaced && fileID != nil)) {
+                            selection = job.id
+                            showingDetail = true
                         }
-                        if previous != end { observedEnds[key] = end }
+                        if replaced { outputFiles[key] = fileID }
                     }
                     if labels != running { running = labels }
                     let requests = Set(jobs.filter { labels.contains($0.label) && scheduler.pendingQuestion($0) != nil }.map(\.label))
@@ -433,7 +481,6 @@ struct AutomationPanel: View {
                 error = nil
             } catch { self.error = error.localizedDescription }
         }
-        .onReceive(addRequest) { adding = true }
         .sheet(isPresented: $adding) { JobEditor { job in
             try scheduler.add(job)
             selection = job.id
@@ -498,7 +545,6 @@ struct AutomationPanel: View {
 
     @ViewBuilder private func detail(_ job: ScheduledJob, terminalHeight: CGFloat) -> some View {
         let active = running.contains(job.label)
-        let offset = logStarts[job.label] ?? 0
         HStack(alignment: .top, spacing: 14) {
             mark(job, size: 56)
             VStack(alignment: .leading, spacing: 4) {
@@ -514,9 +560,9 @@ struct AutomationPanel: View {
                                     toggle: { toggleRun(job) }, edit: { editing = job }, remove: { removal = job })
         }
         Divider()
-        if active || (observedEnds[job.label] ?? 0) > offset {
-            AutomationRun(job: job, offset: offset, active: active, scheduler: scheduler, terminalHeight: terminalHeight)
-                .id("\(job.id):\(offset)")
+        if active || outputFiles[job.label] != nil {
+            AutomationRun(job: job, active: active, scheduler: scheduler, terminalHeight: terminalHeight)
+                .id("\(job.id):\(outputFiles[job.label] ?? 0)")
         } else {
             emptyState("Ready to run", message: "The live terminal appears here when this automation starts.", icon: "terminal")
                 .frame(height: terminalHeight)
@@ -580,10 +626,8 @@ struct AutomationPanel: View {
         do {
             if running.contains(job.label) { try scheduler.stopCurrentRun(job) }
             else {
-                let offset = try scheduler.outputEnd(job)
                 try scheduler.runNow(job)
-                logStarts[job.label] = offset
-                observedEnds[job.label] = offset
+                outputFiles[job.label] = try scheduler.outputFileID(job)
             }
             selection = job.id
             query = ""
@@ -839,7 +883,6 @@ private struct ScheduleNumber: View {
 
 private struct AutomationRun: View {
     let job: ScheduledJob
-    let offset: UInt64
     let active: Bool
     let scheduler: JobScheduler
     let terminalHeight: CGFloat
@@ -859,7 +902,7 @@ private struct AutomationRun: View {
                 Text((job.directory as NSString).abbreviatingWithTildeInPath)
                     .font(TabTypography.path(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
-            AutomationConsole(outputURL: scheduler.logURL(job), offset: offset,
+            AutomationConsole(outputURL: scheduler.logURL(job), offset: 0,
                               sizeURL: job.policy != nil ? scheduler.terminalSizeURL(job) : nil,
                               inputURL: job.policy != nil ? scheduler.terminalInputURL(job) : nil,
                               active: active)
@@ -960,16 +1003,22 @@ final class AutomationNotifications: NSObject, UNUserNotificationCenterDelegate 
     private var shown: Set<String> = []
     private var shownIn: AlertDestination = .notch
     private var categories: [String: UNNotificationCategory] = [:]
+    private var nextOutputUpgradeCheck: Date? = .distantPast
 
     func start() {
         center.delegate = self
         // Ask for badges up front: the dock count for finished Claude replies needs it.
         Task { _ = try? await center.requestAuthorization(options: [.alert, .badge]) }
-        _ = try? scheduler.jobs() // Upgrade existing recorded jobs before their next launch.
         poll()
     }
 
     func poll() {
+        if let nextOutputUpgradeCheck, nextOutputUpgradeCheck <= Date() {
+            self.nextOutputUpgradeCheck = Date().addingTimeInterval(10)
+            do {
+                if try scheduler.upgradeOutput(for: scheduler.jobs()) { self.nextOutputUpgradeCheck = nil }
+            } catch { NSLog("Automation upgrade: %@", error.localizedDescription) }
+        }
         let folder = scheduler.home.appendingPathComponent("Library/Application Support/bananaShell/Recordings")
         let pending = (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.filter { $0.hasSuffix(".exp.pending") } ?? []
         var questions: [AutomationQuestion] = []

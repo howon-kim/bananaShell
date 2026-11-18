@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "selenized-dark",
+  "name": "Selenized Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jan-warchol/selenized",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Selenized Dark",
+    "background": "#103C48",
+    "foreground": "#ADBCBC",
+    "cursor": "#ADBCBC",
+    "selection": "#184956",
+    "ansi": [
+      "#184956",
+      "#FA5750",
+      "#75B938",
+      "#DBB32D",
+      "#4695F7",
+      "#F275BE",
+      "#41C7B9",
+      "#ADBCBC",
+      "#72898F",
+      "#FF665C",
+      "#84C747",
+      "#EBC13D",
+      "#58A3FF",
+      "#FF84CD",
+      "#53D6C7",
+      "#CAD8D9"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "black-metal",
+  "name": "Black Metal",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/metalelf0/base16-black-metal-scheme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Black Metal",
+    "background": "#000000",
+    "foreground": "#C1C1C1",
+    "cursor": "#C1C1C1",
+    "selection": "#C1C1C1",
+    "ansi": [
+      "#000000",
+      "#486E6F",
+      "#DD9999",
+      "#A06666",
+      "#888888",
+      "#999999",
+      "#AAAAAA",
+      "#C1C1C1",
+      "#404040",
+      "#486E6F",
+      "#DD9999",
+      "#A06666",
+      "#888888",
+      "#999999",
+      "#AAAAAA",
+      "#C1C1C1"
+    ]
+  }
+}

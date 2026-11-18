@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sumi-ink",
+  "name": "Sumi Ink",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/EldinBegano/sumi-ink",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sumi Ink",
+    "background": "#1E1B18",
+    "foreground": "#E6DCC6",
+    "cursor": "#A3362A",
+    "selection": "#A3362A",
+    "ansi": [
+      "#3A342E",
+      "#C0503F",
+      "#7F9A6A",
+      "#C9A45C",
+      "#6F86A8",
+      "#A66B86",
+      "#6FA39A",
+      "#D8CCB4",
+      "#7A7166",
+      "#D8705E",
+      "#9CB585",
+      "#DCBD7A",
+      "#8EA2C0",
+      "#C08AA2",
+      "#8FBDB3",
+      "#EFE5D1"
+    ]
+  }
+}

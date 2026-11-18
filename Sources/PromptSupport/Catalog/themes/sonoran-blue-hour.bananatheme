@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sonoran-blue-hour",
+  "name": "Sonoran Blue Hour",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/sonoran-blue-hour",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sonoran Blue Hour",
+    "background": "#171D35",
+    "foreground": "#E9DCD8",
+    "cursor": "#F0AF94",
+    "selection": "#353A61",
+    "ansi": [
+      "#252B48",
+      "#CB777D",
+      "#83ADAB",
+      "#D4AE85",
+      "#799BD6",
+      "#A894CB",
+      "#72BFC6",
+      "#D5CFD6",
+      "#555C82",
+      "#EF9B91",
+      "#A6D2C7",
+      "#F2CC9E",
+      "#A9BCF3",
+      "#D2B7ED",
+      "#9BE4E5",
+      "#FFF1E8"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "seoulbones-dark",
+  "name": "Seoulbones Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Seoulbones Dark",
+    "background": "#4B4B4B",
+    "foreground": "#DDDDDD",
+    "cursor": "#E2E2E2",
+    "selection": "#777777",
+    "ansi": [
+      "#4B4B4B",
+      "#E388A3",
+      "#98BD99",
+      "#FFDF9B",
+      "#97BDDE",
+      "#A5A6C5",
+      "#6FBDBE",
+      "#DDDDDD",
+      "#797172",
+      "#EB99B1",
+      "#8FCD92",
+      "#FFE5B3",
+      "#A2C8E9",
+      "#B2B3DA",
+      "#6BCACB",
+      "#A8A8A8"
+    ]
+  }
+}

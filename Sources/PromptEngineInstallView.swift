@@ -90,10 +90,11 @@ final class PromptEngineInstallation: NSObject, ObservableObject, LocalProcessTe
 struct PromptEngineInstallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var installation: PromptEngineInstallation
-    let theme: String
+    /// The theme waiting for the engine; nil when installing it as a plugin.
+    let theme: String?
     let applied: (URL) -> Void
 
-    init(engine: PromptEngine, theme: String, tools: PromptEngineTools, applied: @escaping (URL) -> Void) {
+    init(engine: PromptEngine, theme: String?, tools: PromptEngineTools, applied: @escaping (URL) -> Void) {
         _installation = StateObject(wrappedValue: PromptEngineInstallation(engine: engine, tools: tools))
         self.theme = theme; self.applied = applied
     }
@@ -104,18 +105,22 @@ struct PromptEngineInstallView: View {
                 Image(systemName: "arrow.down.circle").font(.system(size: 28)).foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Install " + installation.engine.title).font(.system(size: 21, weight: .semibold))
-                    Text("Required to apply “" + theme + "”.").font(.callout).foregroundStyle(.secondary)
+                    Text(theme.map { "Required to apply “" + $0 + "”." } ?? "Prompt engine for \(installation.engine.title) themes.")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
             }.padding(24)
             Divider()
             VStack(alignment: .leading, spacing: 16) {
                 Text(installation.needsHomebrew
-                     ? "Homebrew will be installed first, followed by \(installation.engine.title). Enter your administrator password in the terminal if requested. Your selected theme will be applied when installation finishes."
-                     : "Install \(installation.engine.title) with Homebrew, then automatically apply your selected theme.")
+                     ? "Homebrew will be installed first, followed by \(installation.engine.title). Enter your administrator password in the terminal if requested."
+                        + (theme == nil ? "" : " Your selected theme will be applied when installation finishes.")
+                     : "Install \(installation.engine.title) with Homebrew" + (theme == nil ? "." : ", then automatically apply your selected theme."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Label(theme, systemImage: "paintpalette").font(.callout.weight(.medium))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(14).settingsSurface()
+                if let theme {
+                    Label(theme, systemImage: "paintpalette").font(.callout.weight(.medium))
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(14).settingsSurface()
+                }
                 if installation.started {
                     InstallationTerminal(terminal: installation.terminal).frame(height: 290)
                         .onAppear { installation.terminal.window?.makeFirstResponder(installation.terminal) }

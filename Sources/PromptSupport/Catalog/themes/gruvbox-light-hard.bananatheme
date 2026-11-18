@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gruvbox-light-hard",
+  "name": "Gruvbox Light Hard",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/morhetz/gruvbox/blob/697c00291db857ca0af00ec154e5bd514a79191f/package.json#L6",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Gruvbox Light Hard",
+    "background": "#F9F5D7",
+    "foreground": "#3C3836",
+    "cursor": "#3C3836",
+    "selection": "#3C3836",
+    "ansi": [
+      "#F9F5D7",
+      "#CC241D",
+      "#98971A",
+      "#D79921",
+      "#458588",
+      "#B16286",
+      "#689D6A",
+      "#7C6F64",
+      "#928374",
+      "#9D0006",
+      "#79740E",
+      "#B57614",
+      "#076678",
+      "#8F3F71",
+      "#427B58",
+      "#3C3836"
+    ]
+  }
+}

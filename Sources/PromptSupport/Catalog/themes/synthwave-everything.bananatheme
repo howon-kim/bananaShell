@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "synthwave-everything",
+  "name": "Synthwave Everything",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/robb0wen/synthwave-vscode",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Synthwave Everything",
+    "background": "#2A2139",
+    "foreground": "#F0EFF1",
+    "cursor": "#72F1B8",
+    "selection": "#181521",
+    "ansi": [
+      "#FEFEFE",
+      "#F97E72",
+      "#72F1B8",
+      "#FEDE5D",
+      "#6D77B3",
+      "#C792EA",
+      "#F772E0",
+      "#FEFEFE",
+      "#FEFEFE",
+      "#F88414",
+      "#72F1B8",
+      "#FFF951",
+      "#36F9F6",
+      "#E1ACFF",
+      "#F92AAD",
+      "#FEFEFE"
+    ]
+  }
+}

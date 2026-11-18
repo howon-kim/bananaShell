@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "this-one-goes-to-11",
+  "name": "This One Goes to 11",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/this-one-goes-to-11",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "This One Goes to 11",
+    "background": "#10100F",
+    "foreground": "#F0E6CE",
+    "cursor": "#E6B74E",
+    "selection": "#55431F",
+    "ansi": [
+      "#292722",
+      "#D96A58",
+      "#89B67C",
+      "#D6AA4A",
+      "#82A8C8",
+      "#B49AC7",
+      "#78B8B0",
+      "#D9CFB9",
+      "#827B6D",
+      "#FF9580",
+      "#B8E3A5",
+      "#FFD36B",
+      "#B4D7F2",
+      "#DFC0EF",
+      "#A6E7DE",
+      "#FFF5DF"
+    ]
+  }
+}

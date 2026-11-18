@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zenbones",
+  "name": "Zenbones",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zenbones",
+    "background": "#F0EDEC",
+    "foreground": "#2C363C",
+    "cursor": "#2C363C",
+    "selection": "#CBD9E3",
+    "ansi": [
+      "#F0EDEC",
+      "#A8334C",
+      "#4F6C31",
+      "#944927",
+      "#286486",
+      "#88507D",
+      "#3B8992",
+      "#2C363C",
+      "#B5A7A0",
+      "#94253E",
+      "#3F5A22",
+      "#803D1C",
+      "#1D5573",
+      "#7B3B70",
+      "#2B747C",
+      "#4F5E68"
+    ]
+  }
+}

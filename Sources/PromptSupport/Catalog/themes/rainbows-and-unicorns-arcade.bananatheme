@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-arcade",
+  "name": "Rainbows and Unicorns Arcade",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Arcade",
+    "background": "#000000",
+    "foreground": "#EDEDED",
+    "cursor": "#39FF14",
+    "selection": "#39FF14",
+    "ansi": [
+      "#1A1A1A",
+      "#FF2A4D",
+      "#39FF14",
+      "#FFF01F",
+      "#1F8BFF",
+      "#FF2CF0",
+      "#00F0FF",
+      "#C8C8C8",
+      "#6E6E6E",
+      "#FF8A1F",
+      "#8CFF75",
+      "#FFF777",
+      "#6FB4FF",
+      "#FF7DF5",
+      "#7AF7FF",
+      "#FFFFFF"
+    ]
+  }
+}

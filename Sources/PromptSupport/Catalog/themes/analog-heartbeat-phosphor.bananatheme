@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "analog-heartbeat-phosphor",
+  "name": "Analog Heartbeat: Phosphor",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/analog-heartbeat-phosphor",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Analog Heartbeat: Phosphor",
+    "background": "#101C14",
+    "foreground": "#C5E6AC",
+    "cursor": "#F0BB6D",
+    "selection": "#344637",
+    "ansi": [
+      "#263128",
+      "#A96757",
+      "#79B95D",
+      "#B8A35B",
+      "#7B9C86",
+      "#A28B78",
+      "#73A79B",
+      "#BFCDB2",
+      "#536454",
+      "#D88C73",
+      "#9CE878",
+      "#E9BA69",
+      "#A0C4AB",
+      "#C5AC92",
+      "#95D1BB",
+      "#E7F4D5"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "mistpine",
+  "name": "mistpine",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mistpine/mistpine",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "mistpine",
+    "background": "#0B1F27",
+    "foreground": "#C4C9D0",
+    "cursor": "#C4C9D0",
+    "selection": "#26414A",
+    "ansi": [
+      "#0F272E",
+      "#BE7356",
+      "#8A9A5B",
+      "#C2A55B",
+      "#6F8FA8",
+      "#9A88A8",
+      "#5F9A96",
+      "#A7B0BB",
+      "#546B76",
+      "#D08A6E",
+      "#A9B97A",
+      "#DCC27E",
+      "#93AFC4",
+      "#B8A8C6",
+      "#86BCB6",
+      "#D0D1D6"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-vitrail-light",
+  "name": "Lumina Vitrail Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Vitrail Light",
+    "background": "#FCFAF4",
+    "foreground": "#0F141D",
+    "cursor": "#0F141D",
+    "selection": "#BAC7E8",
+    "ansi": [
+      "#0F141D",
+      "#752200",
+      "#00490F",
+      "#7C4700",
+      "#1729B2",
+      "#62127E",
+      "#005B72",
+      "#6C727E",
+      "#5F5E54",
+      "#581700",
+      "#003408",
+      "#623700",
+      "#12247B",
+      "#480D5E",
+      "#004659",
+      "#8B929E"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-aurora-light",
+  "name": "Lumina Aurora Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Aurora Light",
+    "background": "#F2FAF9",
+    "foreground": "#163236",
+    "cursor": "#163236",
+    "selection": "#B9D4C9",
+    "ansi": [
+      "#163236",
+      "#942A28",
+      "#026D43",
+      "#9F6116",
+      "#425B7A",
+      "#894C84",
+      "#007386",
+      "#59767B",
+      "#556F71",
+      "#6D2926",
+      "#005734",
+      "#864E01",
+      "#17467D",
+      "#733A6E",
+      "#005D6D",
+      "#77959A"
+    ]
+  }
+}

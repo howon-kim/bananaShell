@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "material",
+  "name": "Material",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/kaicataldo/material.vim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Material",
+    "background": "#EAEAEA",
+    "foreground": "#232322",
+    "cursor": "#16AFCA",
+    "selection": "#C2C2C2",
+    "ansi": [
+      "#212121",
+      "#B7141F",
+      "#457B24",
+      "#F6981E",
+      "#134EB2",
+      "#560088",
+      "#0E717C",
+      "#AFAFAF",
+      "#424242",
+      "#E83B3F",
+      "#7ABA3A",
+      "#BFAA00",
+      "#54A4F3",
+      "#AA4DBC",
+      "#26BBD1",
+      "#D9D9D9"
+    ]
+  }
+}

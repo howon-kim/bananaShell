@@ -8,6 +8,8 @@ struct NotchTerminalTarget: Equatable, Identifiable {
     let id: UUID
     let title: String
     let background: NSColor
+    /// The session's terminal colors; nil for bananaShell's defaults.
+    var scheme: ThemeScheme?
 }
 
 struct NotchTerminalGroup: Equatable, Identifiable {
@@ -167,7 +169,7 @@ struct NotchTerminalGroup: Equatable, Identifiable {
             let fd = terminal.process.childfd
             if fd >= 0, let tty = ptsname(fd).map({ String(cString: $0) }),
                (try? server.run(["switch-client", "-c", tty, "-t", PersistentTerminal.name(target.id)])) != nil {
-                terminal.nativeBackgroundColor = target.background
+                TerminalTheme.apply(target.scheme, to: terminal, defaultBackground: target.background)
                 terminal.superview?.layer?.backgroundColor = target.background.cgColor
                 model.current = target.id
                 return
@@ -188,13 +190,29 @@ struct NotchTerminalGroup: Equatable, Identifiable {
         terminal.autoresizingMask = [.width, .height]
         terminal.font = terminalFont(size: 13)
         terminal.lineSpacing = 1.15
-        terminal.nativeBackgroundColor = target.background
-        terminal.nativeForegroundColor = NSColor(white: 0.93, alpha: 1)
+        TerminalTheme.apply(target.scheme, to: terminal, defaultBackground: target.background)
         terminal.processDelegate = self
         terminal.leaveScrollback = { [weak self] in
             guard let self, let id = self.model.current else { return }
             self.server()?.leaveCopyMode(id)
         }
+        terminal.contextActions = TerminalContextActions(
+            wantsMouse: { [weak self] in
+                guard let self, let id = self.model.current else { return false }
+                return self.server()?.wantsMouse(id) ?? false
+            },
+            directory: { [weak self] in
+                guard let self, let id = self.model.current else { return nil }
+                return self.server()?.directory(of: id)
+            },
+            clearScrollback: { [weak self] in
+                guard let self, let id = self.model.current else { return }
+                self.server()?.clearScrollback(id)
+            },
+            inCopyMode: { [weak self] in
+                guard let self, let id = self.model.current else { return false }
+                return self.server()?.inCopyMode(id) ?? false
+            })
         surface.addSubview(terminal)
         self.terminal = terminal
         model.current = target.id

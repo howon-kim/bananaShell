@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sugarplum",
+  "name": "Sugarplum",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/lemonlime0x3C33/iTerm2-Color-Schemes-Sugarplum",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sugarplum",
+    "background": "#111147",
+    "foreground": "#DB7DDD",
+    "cursor": "#53B397",
+    "selection": "#5CA8DC",
+    "ansi": [
+      "#111147",
+      "#5CA8DC",
+      "#53B397",
+      "#249A84",
+      "#DB7DDD",
+      "#D0BEEE",
+      "#F9F3F9",
+      "#A175D4",
+      "#44447A",
+      "#5CB5DC",
+      "#52DEB5",
+      "#01F5C7",
+      "#FA5DFD",
+      "#C6A5FD",
+      "#FFFFFF",
+      "#B577FD"
+    ]
+  }
+}

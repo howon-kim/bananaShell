@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-workbench",
+  "name": "Rainbows and Unicorns Workbench",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Workbench",
+    "background": "#00408F",
+    "foreground": "#FFFFFF",
+    "cursor": "#FF8800",
+    "selection": "#FFFFFF",
+    "ansi": [
+      "#000022",
+      "#FFA79B",
+      "#A6EE8E",
+      "#FFD978",
+      "#9AD2FF",
+      "#F0B0F2",
+      "#8CECE2",
+      "#DCE6F2",
+      "#7FA3CF",
+      "#FFB066",
+      "#C8F7B6",
+      "#FFE9A6",
+      "#C2E4FF",
+      "#F7CFF8",
+      "#BCF5EE",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "melange-light",
+  "name": "Melange Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/savq/melange-nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Melange Light",
+    "background": "#F1F1F1",
+    "foreground": "#54433A",
+    "cursor": "#54433A",
+    "selection": "#54433A",
+    "ansi": [
+      "#E9E1DB",
+      "#C77B8B",
+      "#6E9B72",
+      "#BC5C00",
+      "#7892BD",
+      "#BE79BB",
+      "#739797",
+      "#7D6658",
+      "#A98A78",
+      "#BF0021",
+      "#3A684A",
+      "#A06D00",
+      "#465AA4",
+      "#904180",
+      "#3D6568",
+      "#54433A"
+    ]
+  }
+}

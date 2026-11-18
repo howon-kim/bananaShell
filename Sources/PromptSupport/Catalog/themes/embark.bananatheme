@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "embark",
+  "name": "Embark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/embark-theme/vim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Embark",
+    "background": "#1E1C31",
+    "foreground": "#EEFFFF",
+    "cursor": "#A1EFD3",
+    "selection": "#FBFCFC",
+    "ansi": [
+      "#1E1C31",
+      "#F0719B",
+      "#A1EFD3",
+      "#FFE9AA",
+      "#57C7FF",
+      "#C792EA",
+      "#87DFEB",
+      "#F8F8F2",
+      "#585273",
+      "#F02E6E",
+      "#2CE592",
+      "#FFB378",
+      "#1DA0E2",
+      "#A742EA",
+      "#63F2F1",
+      "#A6B3CC"
+    ]
+  }
+}

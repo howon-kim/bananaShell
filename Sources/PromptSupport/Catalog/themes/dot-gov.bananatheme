@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "dot-gov",
+  "name": "Dot Gov",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "CC0-1.0",
+  "source": "https://v1.designsystem.digital.gov/components/colors/",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Dot Gov",
+    "background": "#262C35",
+    "foreground": "#EBEBEB",
+    "cursor": "#D9002F",
+    "selection": "#1A4080",
+    "ansi": [
+      "#191919",
+      "#BF091D",
+      "#3D9751",
+      "#F6BB34",
+      "#17B2E0",
+      "#7830B0",
+      "#8BD2ED",
+      "#FFFFFF",
+      "#595959",
+      "#BF091D",
+      "#3D9751",
+      "#F6BB34",
+      "#17B2E0",
+      "#7830B0",
+      "#8BD2ED",
+      "#FFFFFF"
+    ]
+  }
+}

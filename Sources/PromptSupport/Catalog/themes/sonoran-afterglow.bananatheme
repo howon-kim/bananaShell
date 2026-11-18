@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sonoran-afterglow",
+  "name": "Sonoran Afterglow",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/sonoran-afterglow",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sonoran Afterglow",
+    "background": "#201A2B",
+    "foreground": "#EDE1D9",
+    "cursor": "#E9B872",
+    "selection": "#49364C",
+    "ansi": [
+      "#30283A",
+      "#D66D73",
+      "#83AD89",
+      "#D9AE69",
+      "#819CD3",
+      "#B78EC5",
+      "#67B8B0",
+      "#D8CCC7",
+      "#67586D",
+      "#F47C65",
+      "#A5D0A3",
+      "#F2CB82",
+      "#A5BAF1",
+      "#D7ACE0",
+      "#86E0D3",
+      "#FFF1E3"
+    ]
+  }
+}

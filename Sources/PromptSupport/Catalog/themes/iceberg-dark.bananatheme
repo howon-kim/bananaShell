@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "iceberg-dark",
+  "name": "Iceberg Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/cocopon/iceberg.vim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Iceberg Dark",
+    "background": "#161821",
+    "foreground": "#C6C8D1",
+    "cursor": "#C6C8D1",
+    "selection": "#C6C8D1",
+    "ansi": [
+      "#1E2132",
+      "#E27878",
+      "#B4BE82",
+      "#E2A478",
+      "#84A0C6",
+      "#A093C7",
+      "#89B8C2",
+      "#C6C8D1",
+      "#6B7089",
+      "#E98989",
+      "#C0CA8E",
+      "#E9B189",
+      "#91ACD1",
+      "#ADA0D3",
+      "#95C4CE",
+      "#D2D4DE"
+    ]
+  }
+}

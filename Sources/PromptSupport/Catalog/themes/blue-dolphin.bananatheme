@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "blue-dolphin",
+  "name": "Blue Dolphin",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/vimiomori/BlueDolphin",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Blue Dolphin",
+    "background": "#006984",
+    "foreground": "#C5F2FF",
+    "cursor": "#FFCC00",
+    "selection": "#2BAECA",
+    "ansi": [
+      "#292D3E",
+      "#FF8288",
+      "#B4E88D",
+      "#F4D69F",
+      "#82AAFF",
+      "#E9C1FF",
+      "#89EBFF",
+      "#D0D0D0",
+      "#9094A4",
+      "#FF8B92",
+      "#DDFFA7",
+      "#FFE585",
+      "#9CC4FF",
+      "#DDB0F6",
+      "#A3F7FF",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-polaire-light",
+  "name": "Lumina Polaire Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Polaire Light",
+    "background": "#F0F9FA",
+    "foreground": "#17323F",
+    "cursor": "#17323F",
+    "selection": "#B8D1DE",
+    "ansi": [
+      "#17323F",
+      "#882322",
+      "#327645",
+      "#965A1C",
+      "#3E5372",
+      "#884C84",
+      "#06677C",
+      "#587483",
+      "#556A74",
+      "#63221F",
+      "#1F6133",
+      "#7F4700",
+      "#173E76",
+      "#723A6E",
+      "#005264",
+      "#7694A4"
+    ]
+  }
+}

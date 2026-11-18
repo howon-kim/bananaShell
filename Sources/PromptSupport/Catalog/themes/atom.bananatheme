@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "atom",
+  "name": "Atom",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "WTFPL",
+  "source": "https://github.com/bahlo/iterm-colors",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Atom",
+    "background": "#161719",
+    "foreground": "#C5C8C6",
+    "cursor": "#D0D0D0",
+    "selection": "#444444",
+    "ansi": [
+      "#000000",
+      "#FD5FF1",
+      "#87C38A",
+      "#FFD7B1",
+      "#85BEFD",
+      "#B9B6FC",
+      "#85BEFD",
+      "#E0E0E0",
+      "#4C4C4C",
+      "#FD5FF1",
+      "#94FA36",
+      "#F5FFA8",
+      "#96CBFE",
+      "#B9B6FC",
+      "#85BEFD",
+      "#E0E0E0"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "horizon-bright",
+  "name": "Horizon Bright",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jolaleye/horizon-theme-vscode",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Horizon Bright",
+    "background": "#FDF0ED",
+    "foreground": "#16161D",
+    "cursor": "#D3A89D",
+    "selection": "#F9CEC3",
+    "ansi": [
+      "#16161D",
+      "#FC4777",
+      "#00CA86",
+      "#F2A682",
+      "#00BEDD",
+      "#FF58B1",
+      "#00CDCB",
+      "#BFAFAC",
+      "#1A1C24",
+      "#FE5F87",
+      "#00D193",
+      "#E5A688",
+      "#00C9E2",
+      "#FF6CBA",
+      "#00C3C2",
+      "#FFF2EF"
+    ]
+  }
+}

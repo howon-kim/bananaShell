@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "snazzy-soft",
+  "name": "Snazzy Soft",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mbadolato/iTerm2-Color-Schemes/pull/474",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Snazzy Soft",
+    "background": "#282A36",
+    "foreground": "#EFF0EB",
+    "cursor": "#EAEAEA",
+    "selection": "#92BCD0",
+    "ansi": [
+      "#000000",
+      "#FF5C57",
+      "#5AF78E",
+      "#F3F99D",
+      "#57C7FF",
+      "#FF6AC1",
+      "#9AEDFE",
+      "#F1F1F0",
+      "#686868",
+      "#FF5C57",
+      "#5AF78E",
+      "#F3F99D",
+      "#57C7FF",
+      "#FF6AC1",
+      "#9AEDFE",
+      "#F1F1F0"
+    ]
+  }
+}

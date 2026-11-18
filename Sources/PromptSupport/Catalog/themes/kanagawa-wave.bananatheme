@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "kanagawa-wave",
+  "name": "Kanagawa Wave",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/rebelot/kanagawa.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Kanagawa Wave",
+    "background": "#1F1F28",
+    "foreground": "#DCD7BA",
+    "cursor": "#DCD7BA",
+    "selection": "#DCD7BA",
+    "ansi": [
+      "#090618",
+      "#C34043",
+      "#76946A",
+      "#C0A36E",
+      "#7E9CD8",
+      "#957FB8",
+      "#6A9589",
+      "#C8C093",
+      "#727169",
+      "#E82424",
+      "#98BB6C",
+      "#E6C384",
+      "#7FB4CA",
+      "#938AA9",
+      "#7AA89F",
+      "#DCD7BA"
+    ]
+  }
+}

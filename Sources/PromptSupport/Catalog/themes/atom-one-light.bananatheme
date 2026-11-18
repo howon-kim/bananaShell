@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "atom-one-light",
+  "name": "Atom One Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/atom/atom/tree/master/packages/one-light-ui",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Atom One Light",
+    "background": "#F9F9F9",
+    "foreground": "#2A2C33",
+    "cursor": "#BBBBBB",
+    "selection": "#D0DFFC",
+    "ansi": [
+      "#000000",
+      "#DE3E35",
+      "#3F953A",
+      "#D2B67C",
+      "#2F5AF3",
+      "#950095",
+      "#3F953A",
+      "#BBBBBB",
+      "#000000",
+      "#DE3E35",
+      "#3F953A",
+      "#D2B67C",
+      "#2F5AF3",
+      "#A00095",
+      "#3F953A",
+      "#FFFFFF"
+    ]
+  }
+}

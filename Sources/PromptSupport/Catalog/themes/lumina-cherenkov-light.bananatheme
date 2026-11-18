@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-cherenkov-light",
+  "name": "Lumina Cherenkov Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Cherenkov Light",
+    "background": "#F5F8FF",
+    "foreground": "#1F2E53",
+    "cursor": "#1F2E53",
+    "selection": "#B3D0F4",
+    "ansi": [
+      "#1F2E53",
+      "#A32224",
+      "#227A3E",
+      "#A35F00",
+      "#0A4FCC",
+      "#90478A",
+      "#087181",
+      "#5E709B",
+      "#5B6B89",
+      "#792825",
+      "#07652C",
+      "#874E00",
+      "#1D448F",
+      "#793474",
+      "#005C69",
+      "#7C90BC"
+    ]
+  }
+}

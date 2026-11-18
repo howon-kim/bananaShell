@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "dayfox",
+  "name": "Dayfox",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/edeneast/nightfox.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Dayfox",
+    "background": "#F6F2EE",
+    "foreground": "#3D2B5A",
+    "cursor": "#3D2B5A",
+    "selection": "#E7D2BE",
+    "ansi": [
+      "#352C24",
+      "#A5222F",
+      "#396847",
+      "#AC5402",
+      "#2848A9",
+      "#6E33CE",
+      "#287980",
+      "#BFB6AE",
+      "#534C45",
+      "#B3434E",
+      "#577F63",
+      "#B86E28",
+      "#4863B6",
+      "#8452D5",
+      "#488D93",
+      "#F4ECE6"
+    ]
+  }
+}

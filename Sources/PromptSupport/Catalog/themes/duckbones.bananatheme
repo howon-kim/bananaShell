@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "duckbones",
+  "name": "Duckbones",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Duckbones",
+    "background": "#0E101A",
+    "foreground": "#EBEFC0",
+    "cursor": "#EDF2C2",
+    "selection": "#37382D",
+    "ansi": [
+      "#0E101A",
+      "#E03600",
+      "#5DCD97",
+      "#E39500",
+      "#00A3CB",
+      "#795CCC",
+      "#00A3CB",
+      "#EBEFC0",
+      "#444860",
+      "#FF4821",
+      "#58DB9E",
+      "#F6A100",
+      "#00B4E0",
+      "#B3A1E6",
+      "#00B4E0",
+      "#B3B692"
+    ]
+  }
+}

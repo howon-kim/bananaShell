@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-ega-85",
+  "name": "Rainbows and Unicorns EGA 85",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns EGA 85",
+    "background": "#050507",
+    "foreground": "#AAAAAA",
+    "cursor": "#AAAAAA",
+    "selection": "#AAAAAA",
+    "ansi": [
+      "#1A1A1F",
+      "#CC3B3B",
+      "#2FB84A",
+      "#C2782E",
+      "#4A6CF0",
+      "#C24BC2",
+      "#2BB8B8",
+      "#AAAAAA",
+      "#6A6A72",
+      "#FF5555",
+      "#55FF55",
+      "#FFFF55",
+      "#7B7BFF",
+      "#FF55FF",
+      "#55FFFF",
+      "#FFFFFF"
+    ]
+  }
+}

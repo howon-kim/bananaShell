@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gruvbox-material-light",
+  "name": "Gruvbox Material Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sainnhe/gruvbox-material",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Gruvbox Material Light",
+    "background": "#FBF1C7",
+    "foreground": "#654735",
+    "cursor": "#654735",
+    "selection": "#654735",
+    "ansi": [
+      "#FBF1C7",
+      "#C14A4A",
+      "#6C782E",
+      "#B47109",
+      "#45707A",
+      "#945E80",
+      "#4C7A5D",
+      "#654735",
+      "#A89984",
+      "#C14A4A",
+      "#6C782E",
+      "#B47109",
+      "#45707A",
+      "#945E80",
+      "#4C7A5D",
+      "#4F3829"
+    ]
+  }
+}

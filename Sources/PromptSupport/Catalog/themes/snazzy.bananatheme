@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "snazzy",
+  "name": "Snazzy",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sindresorhus/iterm2-snazzy",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Snazzy",
+    "background": "#1E1F29",
+    "foreground": "#EBECE6",
+    "cursor": "#E4E4E4",
+    "selection": "#81AEC6",
+    "ansi": [
+      "#000000",
+      "#FC4346",
+      "#50FB7C",
+      "#F0FB8C",
+      "#49BAFF",
+      "#FC4CB4",
+      "#8BE9FE",
+      "#EDEDEC",
+      "#555555",
+      "#FC4346",
+      "#50FB7C",
+      "#F0FB8C",
+      "#49BAFF",
+      "#FC4CB4",
+      "#8BE9FE",
+      "#EDEDEC"
+    ]
+  }
+}

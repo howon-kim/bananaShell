@@ -65,11 +65,23 @@ struct PersistentTerminal: Sendable {
     private static func failure(_ message: String) -> NSError {
         NSError(domain: "bananaShell.tmux", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
-    private static let configuration = """
+    /// UserDefaults key. When false, tmux only keeps sessions alive: no mouse
+    /// handling, copy mode, scrollback or menus; the native terminal does those.
+    static let interactionKey = "tmuxInteraction"
+    static var interactive: Bool { UserDefaults.standard.object(forKey: interactionKey) as? Bool ?? true }
+
+    private static var configuration: String {
+        let mode = interactive
+            ? "set -g mouse on\nset -s terminal-overrides 'linux*:AX@'"
+            // Without the alternate screen, lines tmux scrolls off the top land
+            // in the native terminal's scrollback. linux*:AX@ is tmux's default.
+            : "set -g mouse off\nset -s terminal-overrides 'linux*:AX@,*:smcup@:rmcup@'"
+        return mode + "\n" + baseConfiguration
+    }
+    private static let baseConfiguration = """
     set -g status off
     set -g prefix None
     set -g prefix2 None
-    set -g mouse on
     set -g history-limit 50000
     set -g exit-unattached off
     set -g destroy-unattached off
@@ -85,7 +97,10 @@ struct PersistentTerminal: Sendable {
     set -s escape-time 10
     # AI applications may redraw or jump to their prompt on new output. Keep
     # wheel-up in our scrollback until the user scrolls down to the live screen.
-    bind -n WheelUpPane if -F -t= '#{@banana-hold-scroll}' { copy-mode -e -t=; send-keys -M } { if -F -t= '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send-keys -M } { copy-mode -e -t= } }
+    # Full-screen programs without mouse support (less, man, git log) scroll
+    # their own page with arrow keys rather than tmux's scrollback.
+    bind -n WheelUpPane if -F -t= '#{@banana-hold-scroll}' { copy-mode -e -t=; send-keys -M } { if -F -t= '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send-keys -M } { if -F -t= '#{alternate_on}' { send-keys -t= -N 3 Up } { copy-mode -e -t= } } }
+    bind -n WheelDownPane if -F -t= '#{&&:#{alternate_on},#{!:#{||:#{pane_in_mode},#{mouse_any_flag}}}}' { send-keys -t= -N 3 Down } { send-keys -M }
     bind -T copy-mode Escape send-keys -X cancel
     bind -T copy-mode-vi Escape send-keys -X cancel
     # tmux owns mouse selection. Its defaults copy and then cancel copy mode
@@ -101,6 +116,19 @@ struct PersistentTerminal: Sendable {
     bind -n TripleClick1Pane select-pane -t= \\; if -F '#{||:#{pane_in_mode},#{mouse_any_flag}}' { send-keys -M } { copy-mode -H; send-keys -X select-line; send-keys -X copy-pipe-no-clear }
     bind -T copy-mode MouseDown1Pane select-pane \\; if -F '#{scroll_position}' { send-keys -X clear-selection } { send-keys -X cancel }
     bind -T copy-mode-vi MouseDown1Pane select-pane \\; if -F '#{scroll_position}' { send-keys -X clear-selection } { send-keys -X cancel }
+    # Last, so an older tmux that lacks a key name still applies everything above.
+    # bananaShell shows its own context menu. Drop tmux's menus (right-click,
+    # Option-right-click, status bar, Control-click kill prompt) and pass
+    # right-clicks only to programs that track the mouse.
+    unbind -nq M-MouseDown3Pane
+    unbind -nq MouseDown3Status
+    unbind -nq M-MouseDown3Status
+    unbind -nq MouseDown3StatusLeft
+    unbind -nq M-MouseDown3StatusLeft
+    unbind -nq MouseDown3Empty
+    unbind -nq M-MouseDown3Empty
+    unbind -nq MouseDown1Control9
+    bind -n MouseDown3Pane if -F -t= '#{mouse_any_flag}' { select-pane -t=; send-keys -M }
     """
 
     // Finder and Xcode may launch without LANG/LC_CTYPE. In that environment
@@ -244,12 +272,21 @@ struct PersistentTerminal: Sendable {
 
     func panes() throws -> [Pane] {
         let text = try run(["list-panes", "-a", "-F",
-            "#{session_name}\t#{@banana-slot}\t#{pane_pid}\t#{pane_tty}\t#{pane_current_path}\t#{pane_current_command}\t#{@banana-hold-scroll}\t#{pane_title}"], allowMissingServer: true)
+            "#{window_active}\t#{pane_active}\t#{session_name}\t#{@banana-slot}\t#{pane_pid}\t#{pane_tty}\t#{pane_current_path}\t#{pane_current_command}\t#{@banana-hold-scroll}\t#{pane_title}"], allowMissingServer: true)
+        return Self.parsePanes(text)
+    }
+
+    static func parsePanes(_ text: String) -> [Pane] {
+        // App terminal IDs identify tmux sessions, not individual panes. A
+        // session can contain splits and extra windows; report only its visible
+        // active pane, matching commands targeted at the session name.
+        var seen = Set<UUID>()
         return text.split(separator: "\n").compactMap { line in
-            let fields = line.split(separator: "\t", maxSplits: 7, omittingEmptySubsequences: false).map(String.init)
-            guard fields.count == 8, fields[0].hasPrefix("banana-"),
-                  let id = UUID(uuidString: String(fields[0].dropFirst(7))), let pid = Int32(fields[2]) else { return nil }
-            return Pane(id: id, slot: Int(fields[1]), pid: pid, tty: fields[3], directory: fields[4], title: fields[7], command: fields[5], holdsScroll: fields[6] == "1")
+            let fields = line.split(separator: "\t", maxSplits: 9, omittingEmptySubsequences: false).map(String.init)
+            guard fields.count == 10, fields[0] == "1", fields[1] == "1", fields[2].hasPrefix("banana-"),
+                  let id = UUID(uuidString: String(fields[2].dropFirst(7))), let pid = Int32(fields[4]),
+                  seen.insert(id).inserted else { return nil }
+            return Pane(id: id, slot: Int(fields[3]), pid: pid, tty: fields[5], directory: fields[6], title: fields[9], command: fields[7], holdsScroll: fields[8] == "1")
         }
     }
 
@@ -281,6 +318,30 @@ struct PersistentTerminal: Sendable {
     func leaveCopyMode(_ id: UUID) {
         let target = Self.name(id)
         _ = try? run(["if-shell", "-F", "-t", target, "#{pane_in_mode}", "send-keys -X -t \(target) cancel"])
+    }
+
+    /// Whether the session's visible program has asked for mouse events.
+    func wantsMouse(_ id: UUID) -> Bool {
+        // With tmux mouse off, clicks never reach the program through tmux.
+        guard Self.interactive else { return false }
+        return (try? run(["display-message", "-p", "-t", Self.name(id), "#{mouse_any_flag}"]))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) == "1"
+    }
+
+    func inCopyMode(_ id: UUID) -> Bool {
+        (try? run(["display-message", "-p", "-t", Self.name(id), "#{pane_in_mode}"]))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) == "1"
+    }
+
+    func directory(of id: UUID) -> String? {
+        (try? run(["display-message", "-p", "-t", Self.name(id), "#{pane_current_path}"]))
+            .map { $0.trimmingCharacters(in: .newlines) }.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Drops retained output above the screen; the visible screen stays.
+    func clearScrollback(_ id: UUID) {
+        leaveCopyMode(id)
+        _ = try? run(["clear-history", "-t", Self.name(id)])
     }
 
     func kill(_ id: UUID) throws {

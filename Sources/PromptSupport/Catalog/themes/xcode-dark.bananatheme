@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "xcode-dark",
+  "name": "Xcode Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "ISC",
+  "source": "https://github.com/lunacookies/vim-colors-xcode",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Xcode Dark",
+    "background": "#292A30",
+    "foreground": "#DFDFE0",
+    "cursor": "#DFDFE0",
+    "selection": "#414453",
+    "ansi": [
+      "#414453",
+      "#FF8170",
+      "#78C2B3",
+      "#D9C97C",
+      "#4EB0CC",
+      "#FF7AB2",
+      "#B281EB",
+      "#DFDFE0",
+      "#7F8C98",
+      "#FF8170",
+      "#ACF2E4",
+      "#FFA14F",
+      "#6BDFFF",
+      "#FF7AB2",
+      "#DABAFF",
+      "#DFDFE0"
+    ]
+  }
+}

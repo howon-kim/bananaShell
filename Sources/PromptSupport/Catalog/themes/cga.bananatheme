@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "cga",
+  "name": "CGA",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jdhmtl/cga-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "CGA",
+    "background": "#000000",
+    "foreground": "#AAAAAA",
+    "cursor": "#B8B8B8",
+    "selection": "#C1DEFF",
+    "ansi": [
+      "#000000",
+      "#AA0000",
+      "#00AA00",
+      "#AA5500",
+      "#0D0DB7",
+      "#AA00AA",
+      "#00AAAA",
+      "#AAAAAA",
+      "#555555",
+      "#FF5555",
+      "#55FF55",
+      "#FFFF55",
+      "#5555FF",
+      "#FF55FF",
+      "#55FFFF",
+      "#FFFFFF"
+    ]
+  }
+}

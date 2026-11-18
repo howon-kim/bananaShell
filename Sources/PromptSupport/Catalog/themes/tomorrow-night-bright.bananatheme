@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tomorrow-night-bright",
+  "name": "Tomorrow Night Bright",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/chriskempson/tomorrow-theme/tree/master/iTerm2",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Tomorrow Night Bright",
+    "background": "#000000",
+    "foreground": "#EAEAEA",
+    "cursor": "#EAEAEA",
+    "selection": "#424242",
+    "ansi": [
+      "#000000",
+      "#D54E53",
+      "#B9CA4A",
+      "#E7C547",
+      "#7AA6DA",
+      "#C397D8",
+      "#70C0B1",
+      "#FFFFFF",
+      "#404040",
+      "#D54E53",
+      "#B9CA4A",
+      "#E7C547",
+      "#7AA6DA",
+      "#C397D8",
+      "#70C0B1",
+      "#FFFFFF"
+    ]
+  }
+}

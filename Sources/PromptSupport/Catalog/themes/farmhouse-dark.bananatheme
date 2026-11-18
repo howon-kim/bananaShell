@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "farmhouse-dark",
+  "name": "Farmhouse Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mattly/iterm-colors-farmhouse",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Farmhouse Dark",
+    "background": "#1D2027",
+    "foreground": "#E8E4E1",
+    "cursor": "#006EFE",
+    "selection": "#4D5658",
+    "ansi": [
+      "#1D2027",
+      "#BA0004",
+      "#549D00",
+      "#C87300",
+      "#0049E6",
+      "#9F1B61",
+      "#1FB65C",
+      "#E8E4E1",
+      "#464D54",
+      "#EB0009",
+      "#7AC100",
+      "#EA9A00",
+      "#006EFE",
+      "#BF3B7F",
+      "#19E062",
+      "#F4EEF0"
+    ]
+  }
+}

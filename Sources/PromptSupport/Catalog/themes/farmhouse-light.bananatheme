@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "farmhouse-light",
+  "name": "Farmhouse Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mattly/iterm-colors-farmhouse",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Farmhouse Light",
+    "background": "#E8E4E1",
+    "foreground": "#1D2027",
+    "cursor": "#006EFE",
+    "selection": "#B3B1AA",
+    "ansi": [
+      "#1D2027",
+      "#8D0003",
+      "#3A7D00",
+      "#A95600",
+      "#092CCD",
+      "#820046",
+      "#229256",
+      "#A8A4A1",
+      "#394047",
+      "#EB0009",
+      "#7AC100",
+      "#EA9A00",
+      "#006EFE",
+      "#BF3B7F",
+      "#00C649",
+      "#F4EEF0"
+    ]
+  }
+}

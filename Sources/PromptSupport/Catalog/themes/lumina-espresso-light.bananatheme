@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-espresso-light",
+  "name": "Lumina Espresso Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Espresso Light",
+    "background": "#FCF0E3",
+    "foreground": "#39261B",
+    "cursor": "#39261B",
+    "selection": "#D8BCCC",
+    "ansi": [
+      "#39261B",
+      "#842120",
+      "#15744D",
+      "#6D4E36",
+      "#2868A3",
+      "#864B81",
+      "#007083",
+      "#7F685C",
+      "#756457",
+      "#5F201E",
+      "#005E3C",
+      "#653400",
+      "#1A5488",
+      "#70386B",
+      "#005A6A",
+      "#9F877A"
+    ]
+  }
+}

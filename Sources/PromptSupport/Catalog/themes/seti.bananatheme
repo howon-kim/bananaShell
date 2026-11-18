@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "seti",
+  "name": "Seti",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jesseweed/seti-syntax/",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Seti",
+    "background": "#111213",
+    "foreground": "#CACECD",
+    "cursor": "#E3BF21",
+    "selection": "#303233",
+    "ansi": [
+      "#323232",
+      "#C22832",
+      "#8EC43D",
+      "#E0C64F",
+      "#43A5D5",
+      "#8B57B5",
+      "#8EC43D",
+      "#EEEEEE",
+      "#3F3F3F",
+      "#C22832",
+      "#8EC43D",
+      "#E0C64F",
+      "#43A5D5",
+      "#8B57B5",
+      "#8EC43D",
+      "#FFFFFF"
+    ]
+  }
+}

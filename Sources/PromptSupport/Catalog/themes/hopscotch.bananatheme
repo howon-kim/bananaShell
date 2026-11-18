@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "hopscotch",
+  "name": "Hopscotch",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "CC0-1.0",
+  "source": "https://github.com/idleberg/Hopscotch",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Hopscotch",
+    "background": "#322931",
+    "foreground": "#B9B5B8",
+    "cursor": "#B9B5B8",
+    "selection": "#5C545B",
+    "ansi": [
+      "#322931",
+      "#DD464C",
+      "#8FC13E",
+      "#FDCC59",
+      "#1290BF",
+      "#C85E7C",
+      "#149B93",
+      "#B9B5B8",
+      "#797379",
+      "#FD8B19",
+      "#5C545C",
+      "#5C545B",
+      "#989498",
+      "#D5D3D5",
+      "#B33508",
+      "#FFFFFF"
+    ]
+  }
+}

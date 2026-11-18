@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "doom-one",
+  "name": "Doom One",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/doomemacs/themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Doom One",
+    "background": "#282C34",
+    "foreground": "#BBC2CF",
+    "cursor": "#51AFEF",
+    "selection": "#42444B",
+    "ansi": [
+      "#000000",
+      "#FF6C6B",
+      "#98BE65",
+      "#ECBE7B",
+      "#A9A1E1",
+      "#C678DD",
+      "#51AFEF",
+      "#BBC2CF",
+      "#595959",
+      "#FF6655",
+      "#99BB66",
+      "#ECBE7B",
+      "#A9A1E1",
+      "#C678DD",
+      "#51AFEF",
+      "#BFBFBF"
+    ]
+  }
+}

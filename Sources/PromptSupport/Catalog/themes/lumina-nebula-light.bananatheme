@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-nebula-light",
+  "name": "Lumina Nebula Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Nebula Light",
+    "background": "#F8F4FF",
+    "foreground": "#2D2C46",
+    "cursor": "#2D2C46",
+    "selection": "#C7C7EF",
+    "ansi": [
+      "#2D2C46",
+      "#932222",
+      "#007650",
+      "#955B01",
+      "#3F5777",
+      "#894884",
+      "#016E90",
+      "#6D6D8B",
+      "#676680",
+      "#6C2421",
+      "#005F40",
+      "#7A4A00",
+      "#0E417F",
+      "#72356E",
+      "#005975",
+      "#8C8CAB"
+    ]
+  }
+}

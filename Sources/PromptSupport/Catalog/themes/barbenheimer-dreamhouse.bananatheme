@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "barbenheimer-dreamhouse",
+  "name": "Barbenheimer Dreamhouse",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jayvicsanantonio/barbenheimer-zed-theme",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Barbenheimer Dreamhouse",
+    "background": "#FFF8F0",
+    "foreground": "#14140B",
+    "cursor": "#F060A0",
+    "selection": "#14140B",
+    "ansi": [
+      "#302820",
+      "#F060A0",
+      "#9BCC6A",
+      "#D1B161",
+      "#7AC1ED",
+      "#BA55D3",
+      "#80CBC4",
+      "#14140B",
+      "#4A443A",
+      "#DC5687",
+      "#86B465",
+      "#D3B363",
+      "#64B5D9",
+      "#9B40B4",
+      "#609E9A",
+      "#000000"
+    ]
+  }
+}

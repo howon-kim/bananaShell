@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "x-berlin",
+  "name": "X Berlin",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/x-berlin",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "X Berlin",
+    "background": "#000000",
+    "foreground": "#CCCCCC",
+    "cursor": "#CCCCCC",
+    "selection": "#CCCCCC",
+    "ansi": [
+      "#000000",
+      "#999999",
+      "#BBBBBB",
+      "#DDDDDD",
+      "#888888",
+      "#AAAAAA",
+      "#CCCCCC",
+      "#FFFFFF",
+      "#404040",
+      "#BBBBBB",
+      "#DDDDDD",
+      "#FFFFFF",
+      "#AAAAAA",
+      "#CCCCCC",
+      "#EEEEEE",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-quartz-light",
+  "name": "Lumina Quartz Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Quartz Light",
+    "background": "#F5F7FA",
+    "foreground": "#30353B",
+    "cursor": "#30353B",
+    "selection": "#BBBEC1",
+    "ansi": [
+      "#30353B",
+      "#7D2B28",
+      "#217550",
+      "#9A642C",
+      "#446894",
+      "#82527E",
+      "#007092",
+      "#6B7177",
+      "#656B72",
+      "#5A2522",
+      "#215E41",
+      "#82511C",
+      "#31547E",
+      "#6C3F69",
+      "#115A74",
+      "#8A9097"
+    ]
+  }
+}

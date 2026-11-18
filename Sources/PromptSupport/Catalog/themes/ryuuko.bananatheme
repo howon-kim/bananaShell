@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "ryuuko",
+  "name": "Ryuuko",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/dylanaraps/ryuuko",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Ryuuko",
+    "background": "#2C3941",
+    "foreground": "#ECECEC",
+    "cursor": "#ECECEC",
+    "selection": "#002831",
+    "ansi": [
+      "#2C3941",
+      "#865F5B",
+      "#66907D",
+      "#B1A990",
+      "#6A8E95",
+      "#B18A73",
+      "#88B2AC",
+      "#ECECEC",
+      "#5D7079",
+      "#865F5B",
+      "#66907D",
+      "#B1A990",
+      "#6A8E95",
+      "#B18A73",
+      "#88B2AC",
+      "#ECECEC"
+    ]
+  }
+}

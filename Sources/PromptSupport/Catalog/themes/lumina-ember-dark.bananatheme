@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-ember-dark",
+  "name": "Lumina Ember Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Ember Dark",
+    "background": "#171511",
+    "foreground": "#E4DDD0",
+    "cursor": "#E4DDD0",
+    "selection": "#46342A",
+    "ansi": [
+      "#1C1A15",
+      "#CB7870",
+      "#A9CC97",
+      "#E5CC88",
+      "#94BEDC",
+      "#D7A2C6",
+      "#91C7CD",
+      "#C4BDB0",
+      "#8E8577",
+      "#DA9890",
+      "#C5E5B5",
+      "#FFE6A2",
+      "#B0D7F4",
+      "#F0BCDF",
+      "#AAE1E7",
+      "#E4DDD0"
+    ]
+  }
+}

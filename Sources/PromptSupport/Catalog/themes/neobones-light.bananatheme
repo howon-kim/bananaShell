@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "neobones-light",
+  "name": "Neobones Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Neobones Light",
+    "background": "#E5EDE6",
+    "foreground": "#202E18",
+    "cursor": "#202E18",
+    "selection": "#ADE48C",
+    "ansi": [
+      "#E5EDE6",
+      "#A8334C",
+      "#567A30",
+      "#944927",
+      "#286486",
+      "#88507D",
+      "#3B8992",
+      "#202E18",
+      "#99AC9C",
+      "#94253E",
+      "#3F5A22",
+      "#803D1C",
+      "#1D5573",
+      "#7B3B70",
+      "#2B747C",
+      "#415934"
+    ]
+  }
+}

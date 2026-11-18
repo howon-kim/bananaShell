@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-quartz-dark",
+  "name": "Lumina Quartz Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Quartz Dark",
+    "background": "#161719",
+    "foreground": "#CCD0D3",
+    "cursor": "#CCD0D3",
+    "selection": "#44474A",
+    "ansi": [
+      "#1A1C1E",
+      "#C57C74",
+      "#9DD7B7",
+      "#DFCFB0",
+      "#B6CEED",
+      "#E4BDDF",
+      "#A8D5DB",
+      "#ACB0B3",
+      "#868B90",
+      "#D59A93",
+      "#C2EDD5",
+      "#FFE5B1",
+      "#D6E8FF",
+      "#FFD7FA",
+      "#C1EFF6",
+      "#CCD0D3"
+    ]
+  }
+}

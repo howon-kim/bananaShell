@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zenwritten-dark",
+  "name": "Zenwritten Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Zenwritten Dark",
+    "background": "#191919",
+    "foreground": "#BBBBBB",
+    "cursor": "#C9C9C9",
+    "selection": "#404040",
+    "ansi": [
+      "#191919",
+      "#DE6E7C",
+      "#819B69",
+      "#B77E64",
+      "#6099C0",
+      "#B279A7",
+      "#66A5AD",
+      "#BBBBBB",
+      "#4A4546",
+      "#E8838F",
+      "#8BAE68",
+      "#D68C67",
+      "#61ABDA",
+      "#CF86C1",
+      "#65B8C1",
+      "#8E8E8E"
+    ]
+  }
+}

@@ -8,4 +8,14 @@ fi
 if [[ -n $BANANA_PAY_RESPECTS && -x $BANANA_PAY_RESPECTS ]]; then
   eval "$("$BANANA_PAY_RESPECTS" zsh --alias --nocnf)"
 fi
-unset BANANA_AUTOSUGGESTIONS BANANA_PAY_RESPECTS
+if [[ -n ${BANANA_EXTENSION_ROOT-} && -n ${BANANA_EXTENSION_SCRIPTS-} ]]; then
+  for _banana_script in "${(@s.:.)BANANA_EXTENSION_SCRIPTS}"; do
+    [[ -r "$BANANA_EXTENSION_ROOT/$_banana_script" ]] && source "$BANANA_EXTENSION_ROOT/$_banana_script"
+  done
+  unset _banana_script
+fi
+unset BANANA_EXTENSION_ROOT BANANA_EXTENSION_SCRIPTS
+if [[ -n $BANANA_SYNTAX_HIGHLIGHTING && -r $BANANA_SYNTAX_HIGHLIGHTING ]] && (( ! $+functions[_zsh_highlight] )); then
+  source "$BANANA_SYNTAX_HIGHLIGHTING"
+fi
+unset BANANA_AUTOSUGGESTIONS BANANA_PAY_RESPECTS BANANA_SYNTAX_HIGHLIGHTING

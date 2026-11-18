@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "alabaster",
+  "name": "Alabaster",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "'https://github.com/mkaschenko/iterm2-theme-alabaster",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Alabaster",
+    "background": "#F7F7F7",
+    "foreground": "#000000",
+    "cursor": "#007ACC",
+    "selection": "#BFDBFE",
+    "ansi": [
+      "#000000",
+      "#AA3731",
+      "#448C27",
+      "#CB9000",
+      "#325CC0",
+      "#7A3E9D",
+      "#0083B2",
+      "#B7B7B7",
+      "#777777",
+      "#F05050",
+      "#60CB00",
+      "#F2AF50",
+      "#007ACC",
+      "#E64CE6",
+      "#00AACB",
+      "#F7F7F7"
+    ]
+  }
+}

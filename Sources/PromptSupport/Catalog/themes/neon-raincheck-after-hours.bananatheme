@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "neon-raincheck-after-hours",
+  "name": "Neon Raincheck: After Hours",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/neon-raincheck-after-hours",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Neon Raincheck: After Hours",
+    "background": "#0B1019",
+    "foreground": "#B8C9D9",
+    "cursor": "#79C9D8",
+    "selection": "#202C42",
+    "ansi": [
+      "#18202D",
+      "#B95C7B",
+      "#609D8C",
+      "#B8A46B",
+      "#6586C0",
+      "#9679C5",
+      "#4C9FAF",
+      "#A4B5C5",
+      "#3D4C63",
+      "#D77C99",
+      "#7ABBA5",
+      "#D5C183",
+      "#86A6DC",
+      "#B69ADB",
+      "#6BC4D1",
+      "#DCEAF2"
+    ]
+  }
+}

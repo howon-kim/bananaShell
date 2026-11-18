@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tomorrow-night-blue",
+  "name": "Tomorrow Night Blue",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/chriskempson/tomorrow-theme/tree/master/iTerm2",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Tomorrow Night Blue",
+    "background": "#002451",
+    "foreground": "#FFFFFF",
+    "cursor": "#FFFFFF",
+    "selection": "#003F8E",
+    "ansi": [
+      "#000000",
+      "#FF9DA4",
+      "#D1F1A9",
+      "#FFEEAD",
+      "#BBDAFF",
+      "#EBBBFF",
+      "#99FFFF",
+      "#FFFFFF",
+      "#4C4C4C",
+      "#FF9DA4",
+      "#D1F1A9",
+      "#FFEEAD",
+      "#BBDAFF",
+      "#EBBBFF",
+      "#99FFFF",
+      "#FFFFFF"
+    ]
+  }
+}

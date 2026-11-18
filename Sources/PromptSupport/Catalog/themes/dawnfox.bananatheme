@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "dawnfox",
+  "name": "Dawnfox",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/EdenEast/nightfox.nvim/tree/main/extra",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Dawnfox",
+    "background": "#FAF4ED",
+    "foreground": "#575279",
+    "cursor": "#575279",
+    "selection": "#D0D8D8",
+    "ansi": [
+      "#575279",
+      "#B4637A",
+      "#618774",
+      "#EA9D34",
+      "#286983",
+      "#907AA9",
+      "#56949F",
+      "#B2B6BD",
+      "#5F5695",
+      "#C26D85",
+      "#629F81",
+      "#EEA846",
+      "#2D81A3",
+      "#9A80B9",
+      "#5CA7B4",
+      "#E6EBF3"
+    ]
+  }
+}

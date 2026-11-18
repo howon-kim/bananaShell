@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "wasteland-terminal",
+  "name": "Wasteland Terminal",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/chlp/ghostty-fallout-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Wasteland Terminal",
+    "background": "#050B05",
+    "foreground": "#18FF62",
+    "cursor": "#39FF72",
+    "selection": "#1A4D27",
+    "ansi": [
+      "#050B05",
+      "#26B34F",
+      "#18FF62",
+      "#A1D64B",
+      "#3E9B67",
+      "#64B879",
+      "#60E899",
+      "#B5FFC5",
+      "#2C6B3F",
+      "#3FD068",
+      "#5CFF8F",
+      "#C4EE70",
+      "#56BD84",
+      "#84D69A",
+      "#8CF5B8",
+      "#E0FFE6"
+    ]
+  }
+}

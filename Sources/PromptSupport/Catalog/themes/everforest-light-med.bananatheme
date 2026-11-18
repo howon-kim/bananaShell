@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "everforest-light-med",
+  "name": "Everforest Light Med",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/icewind/everforest.iterm2",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Everforest Light Med",
+    "background": "#EFEBD4",
+    "foreground": "#5C6A72",
+    "cursor": "#F57D26",
+    "selection": "#EAEDC8",
+    "ansi": [
+      "#7A8478",
+      "#E67E80",
+      "#9AB373",
+      "#C1A266",
+      "#7FBBB3",
+      "#D699B6",
+      "#83C092",
+      "#B2AF9F",
+      "#A6B0A0",
+      "#F85552",
+      "#8DA101",
+      "#DFA000",
+      "#3A94C5",
+      "#DF69BA",
+      "#35A77C",
+      "#FFFBEF"
+    ]
+  }
+}

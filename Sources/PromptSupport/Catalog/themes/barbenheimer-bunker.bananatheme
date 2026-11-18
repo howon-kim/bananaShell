@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "barbenheimer-bunker",
+  "name": "Barbenheimer Bunker",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jayvicsanantonio/barbenheimer-zed-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Barbenheimer Bunker",
+    "background": "#14140B",
+    "foreground": "#F2C0D7",
+    "cursor": "#F672AC",
+    "selection": "#F2C0D7",
+    "ansi": [
+      "#14140B",
+      "#F672AC",
+      "#A0E0C0",
+      "#F0E0B0",
+      "#A0C0F0",
+      "#D4A8F9",
+      "#A0E0D0",
+      "#E0E0E0",
+      "#AF9F94",
+      "#F672AC",
+      "#A0E0C0",
+      "#F0E0B0",
+      "#A0C0F0",
+      "#D4A8F9",
+      "#A0E0D0",
+      "#E0E0E0"
+    ]
+  }
+}

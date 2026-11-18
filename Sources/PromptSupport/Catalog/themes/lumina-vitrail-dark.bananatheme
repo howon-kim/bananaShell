@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-vitrail-dark",
+  "name": "Lumina Vitrail Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Vitrail Dark",
+    "background": "#070912",
+    "foreground": "#F1EEE6",
+    "cursor": "#F1EEE6",
+    "selection": "#1F2946",
+    "ansi": [
+      "#0A0D17",
+      "#FF763B",
+      "#76D983",
+      "#FBCA3F",
+      "#7299FF",
+      "#D19CDF",
+      "#4DE0F7",
+      "#D0CDC5",
+      "#959FAC",
+      "#FFA37F",
+      "#93F39F",
+      "#FFE6A7",
+      "#97B6FF",
+      "#EFB2FF",
+      "#ABF2FF",
+      "#F1EEE6"
+    ]
+  }
+}

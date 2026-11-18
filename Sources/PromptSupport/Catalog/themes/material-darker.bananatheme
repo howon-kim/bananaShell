@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "material-darker",
+  "name": "Material Darker",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mbadolato/iTerm2-Color-Schemes/pull/241",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Material Darker",
+    "background": "#212121",
+    "foreground": "#EEFFFF",
+    "cursor": "#FFFFFF",
+    "selection": "#EEFFFF",
+    "ansi": [
+      "#000000",
+      "#FF5370",
+      "#C3E88D",
+      "#FFCB6B",
+      "#82AAFF",
+      "#C792EA",
+      "#89DDFF",
+      "#FFFFFF",
+      "#545454",
+      "#FF5370",
+      "#C3E88D",
+      "#FFCB6B",
+      "#82AAFF",
+      "#C792EA",
+      "#89DDFF",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-lagoon-light",
+  "name": "Lumina Lagoon Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Lagoon Light",
+    "background": "#E9FAFA",
+    "foreground": "#0B323B",
+    "cursor": "#0B323B",
+    "selection": "#AFD3D7",
+    "ansi": [
+      "#0B323B",
+      "#8F2121",
+      "#2E6147",
+      "#A1600D",
+      "#185CA9",
+      "#894984",
+      "#006E71",
+      "#507580",
+      "#546F74",
+      "#682220",
+      "#005031",
+      "#874E00",
+      "#154986",
+      "#72366E",
+      "#00585B",
+      "#6F95A0"
+    ]
+  }
+}

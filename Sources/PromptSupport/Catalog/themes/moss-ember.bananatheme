@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "moss-ember",
+  "name": "Moss & Ember",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/moss-ember",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Moss & Ember",
+    "background": "#18231F",
+    "foreground": "#E9DDC6",
+    "cursor": "#D98A59",
+    "selection": "#36483A",
+    "ansi": [
+      "#26342C",
+      "#C5755E",
+      "#829D69",
+      "#C6A667",
+      "#799CA0",
+      "#AD8A9B",
+      "#72A69B",
+      "#D8CEB9",
+      "#586A59",
+      "#E69A75",
+      "#A9BD79",
+      "#E4C481",
+      "#9EBCC0",
+      "#C8A4B6",
+      "#92CEC0",
+      "#FFF0D6"
+    ]
+  }
+}

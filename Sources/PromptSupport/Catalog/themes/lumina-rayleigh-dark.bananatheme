@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-rayleigh-dark",
+  "name": "Lumina Rayleigh Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Rayleigh Dark",
+    "background": "#091D30",
+    "foreground": "#D4DFEB",
+    "cursor": "#D4DFEB",
+    "selection": "#204360",
+    "ansi": [
+      "#0B2237",
+      "#D96D65",
+      "#96D2A2",
+      "#F1CC79",
+      "#6FC3FF",
+      "#EEA3C9",
+      "#AFDEE6",
+      "#B4BFCA",
+      "#849BB4",
+      "#E59088",
+      "#AEEDBB",
+      "#FFE5AD",
+      "#AADAFF",
+      "#FFC3E0",
+      "#B6F4FF",
+      "#D4DFEB"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "squirrelsong-dark",
+  "name": "Squirrelsong Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sapegin/squirrelsong",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Squirrelsong Dark",
+    "background": "#372920",
+    "foreground": "#B19B89",
+    "cursor": "#B19B89",
+    "selection": "#5B402E",
+    "ansi": [
+      "#372920",
+      "#BA4138",
+      "#468336",
+      "#D4B139",
+      "#4395C6",
+      "#855FB8",
+      "#2F9794",
+      "#D3B9A2",
+      "#704F39",
+      "#DF4D43",
+      "#659A4C",
+      "#E8C23F",
+      "#4CA4DB",
+      "#9D70DA",
+      "#60ACA9",
+      "#F2D4BB"
+    ]
+  }
+}

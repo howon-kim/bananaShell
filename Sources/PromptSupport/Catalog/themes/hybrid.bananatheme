@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "hybrid",
+  "name": "Hybrid",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/w0ng/vim-hybrid",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Hybrid",
+    "background": "#161719",
+    "foreground": "#B7BCBA",
+    "cursor": "#B7BCBA",
+    "selection": "#1E1F22",
+    "ansi": [
+      "#2A2E33",
+      "#B84D51",
+      "#B3BF5A",
+      "#E4B55E",
+      "#6E90B0",
+      "#A17EAC",
+      "#7FBFB4",
+      "#B5B9B6",
+      "#434548",
+      "#8D2E32",
+      "#798431",
+      "#E58A50",
+      "#4B6B88",
+      "#6E5079",
+      "#4D7B74",
+      "#5A626A"
+    ]
+  }
+}

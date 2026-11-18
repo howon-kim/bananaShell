@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "fairyfloss",
+  "name": "Fairyfloss",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sailorhg/fairyfloss",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Fairyfloss",
+    "background": "#5A5475",
+    "foreground": "#F8F8F2",
+    "cursor": "#F8F8F0",
+    "selection": "#8077A8",
+    "ansi": [
+      "#040303",
+      "#F92672",
+      "#C2FFDF",
+      "#E6C000",
+      "#C2FFDF",
+      "#FFB8D1",
+      "#C5A3FF",
+      "#F8F8F0",
+      "#6090CB",
+      "#FF857F",
+      "#C2FFDF",
+      "#FFEA00",
+      "#C2FFDF",
+      "#FFB8D1",
+      "#C5A3FF",
+      "#F8F8F0"
+    ]
+  }
+}

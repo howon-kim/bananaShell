@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tokyonight-storm",
+  "name": "TokyoNight Storm",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "Apache-2.0",
+  "source": "https://github.com/folke/tokyonight.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "TokyoNight Storm",
+    "background": "#24283B",
+    "foreground": "#C0CAF5",
+    "cursor": "#C0CAF5",
+    "selection": "#364A82",
+    "ansi": [
+      "#1D202F",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#A9B1D6",
+      "#4E5575",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#C0CAF5"
+    ]
+  }
+}

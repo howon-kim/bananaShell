@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zenwritten-light",
+  "name": "Zenwritten Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zenwritten Light",
+    "background": "#EEEEEE",
+    "foreground": "#353535",
+    "cursor": "#353535",
+    "selection": "#D7D7D7",
+    "ansi": [
+      "#EEEEEE",
+      "#A8334C",
+      "#4F6C31",
+      "#944927",
+      "#286486",
+      "#88507D",
+      "#3B8992",
+      "#353535",
+      "#ACA9A9",
+      "#94253E",
+      "#3F5A22",
+      "#803D1C",
+      "#1D5573",
+      "#7B3B70",
+      "#2B747C",
+      "#5C5C5C"
+    ]
+  }
+}

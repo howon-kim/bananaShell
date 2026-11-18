@@ -14,6 +14,13 @@
 		AB0911070000000000000009 /* Updates.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB091107000000000000000A /* Updates.swift */; };
 		AB091107000000000000000B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = AB091107000000000000000C /* Sparkle */; };
 		DF0C60684E1746EA8B91A101 /* TerminalComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0C60684E1746EA8B91A102 /* TerminalComposition.swift */; };
+		DF0C60684E1746EA8B91A401 /* DebugSnapshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0C60684E1746EA8B91A402 /* DebugSnapshots.swift */; };
+		CF3077A0757F41A78DF16C01 /* ExtensionCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3077A0757F41A78DF16C02 /* ExtensionCatalog.swift */; };
+		CF3077A0757F41A78DF16D01 /* ExtensionPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3077A0757F41A78DF16D02 /* ExtensionPreview.swift */; };
+		CF3077A0757F41A78DF16B01 /* ExtensionMarketplace.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3077A0757F41A78DF16B02 /* ExtensionMarketplace.swift */; };
+		AA51E7A0C4B24D6E9F3A0C01 /* MarketplaceLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA51E7A0C4B24D6E9F3A0C02 /* MarketplaceLayout.swift */; };
+		DF0C60684E1746EA8B91A301 /* ThemeMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0C60684E1746EA8B91A302 /* ThemeMarketplaceView.swift */; };
+		DF0C60684E1746EA8B91A201 /* ThemeMarketplace.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0C60684E1746EA8B91A202 /* ThemeMarketplace.swift */; };
 		0AE0843D85AC9841316E08C0 /* Automations.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE664BF9F18F9852BBE4D10 /* Automations.swift */; };
 		0E73186253C549F6DD219C50 /* JetBrainsMonoNLNerdFontMono-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BE5C50900D630551A77B7FD5 /* JetBrainsMonoNLNerdFontMono-Regular.ttf */; };
 		140C2D1076EEC2898E325207 /* AutomationTerminal.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9605F97674906E9AB74D446 /* AutomationTerminal.swift */; };
@@ -51,6 +58,13 @@
 		AB091107000000000000000A /* Updates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Updates.swift; sourceTree = "<group>"; };
 		AB091107000000000000000E /* bananaShell.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = bananaShell.entitlements; sourceTree = "<group>"; };
 		DF0C60684E1746EA8B91A102 /* TerminalComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalComposition.swift; sourceTree = "<group>"; };
+		DF0C60684E1746EA8B91A402 /* DebugSnapshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSnapshots.swift; sourceTree = "<group>"; };
+		CF3077A0757F41A78DF16C02 /* ExtensionCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionCatalog.swift; sourceTree = "<group>"; };
+		CF3077A0757F41A78DF16D02 /* ExtensionPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPreview.swift; sourceTree = "<group>"; };
+		CF3077A0757F41A78DF16B02 /* ExtensionMarketplace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionMarketplace.swift; sourceTree = "<group>"; };
+		AA51E7A0C4B24D6E9F3A0C02 /* MarketplaceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceLayout.swift; sourceTree = "<group>"; };
+		DF0C60684E1746EA8B91A302 /* ThemeMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeMarketplaceView.swift; sourceTree = "<group>"; };
+		DF0C60684E1746EA8B91A202 /* ThemeMarketplace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeMarketplace.swift; sourceTree = "<group>"; };
 		16A7FB76B928F481D7FA7F29 /* PromptSupport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PromptSupport; path = Sources/PromptSupport; sourceTree = SOURCE_ROOT; };
 		20A5C9ABB7B2A8700D91E607 /* ProgramLogos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ProgramLogos; path = Sources/ProgramLogos; sourceTree = SOURCE_ROOT; };
 		38F64639269C038AD14090E7 /* PromptSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptSettings.swift; sourceTree = "<group>"; };
@@ -114,6 +128,13 @@
 				4FCE98FE2F3CC84A404A932C /* TabTypography.swift */,
 				7C96696E973D980EC2CA93DE /* TerminalSlots.swift */,
 				DF0C60684E1746EA8B91A102 /* TerminalComposition.swift */,
+				DF0C60684E1746EA8B91A402 /* DebugSnapshots.swift */,
+				CF3077A0757F41A78DF16C02 /* ExtensionCatalog.swift */,
+				CF3077A0757F41A78DF16D02 /* ExtensionPreview.swift */,
+				CF3077A0757F41A78DF16B02 /* ExtensionMarketplace.swift */,
+				AA51E7A0C4B24D6E9F3A0C02 /* MarketplaceLayout.swift */,
+				DF0C60684E1746EA8B91A302 /* ThemeMarketplaceView.swift */,
+				DF0C60684E1746EA8B91A202 /* ThemeMarketplace.swift */,
 				AB0911070000000000000002 /* ClaudeCompletion.swift */,
 				AB0911070000000000000008 /* NotchTerminal.swift */,
 				AB091107000000000000000A /* Updates.swift */,
@@ -267,6 +288,13 @@
 				AEC6C164DD8142CD6E0DC4D9 /* TabTypography.swift in Sources */,
 				B1E170904920609D2CAFD836 /* TerminalSlots.swift in Sources */,
 				DF0C60684E1746EA8B91A101 /* TerminalComposition.swift in Sources */,
+				DF0C60684E1746EA8B91A401 /* DebugSnapshots.swift in Sources */,
+				CF3077A0757F41A78DF16C01 /* ExtensionCatalog.swift in Sources */,
+				CF3077A0757F41A78DF16D01 /* ExtensionPreview.swift in Sources */,
+				CF3077A0757F41A78DF16B01 /* ExtensionMarketplace.swift in Sources */,
+				AA51E7A0C4B24D6E9F3A0C01 /* MarketplaceLayout.swift in Sources */,
+				DF0C60684E1746EA8B91A301 /* ThemeMarketplaceView.swift in Sources */,
+				DF0C60684E1746EA8B91A201 /* ThemeMarketplace.swift in Sources */,
 				AB0911070000000000000001 /* ClaudeCompletion.swift in Sources */,
 				AB0911070000000000000007 /* NotchTerminal.swift in Sources */,
 				AB0911070000000000000009 /* Updates.swift in Sources */,

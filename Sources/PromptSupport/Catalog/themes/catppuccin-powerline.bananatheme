@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "id": "catppuccin-powerline",
+  "name": "Catppuccin Powerline",
+  "author": "bananaShell",
+  "summary": "Catppuccin Mocha with the Starship powerline preset.",
+  "license": "MIT",
+  "source": "https://github.com/catppuccin/palette",
+  "tags": [
+    "dark",
+    "starship"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Catppuccin Mocha",
+    "background": "#1E1E2E",
+    "foreground": "#CDD6F4",
+    "cursor": "#F5E0DC",
+    "selection": "#F5E0DC",
+    "ansi": [
+      "#45475A",
+      "#F38BA8",
+      "#A6E3A1",
+      "#F9E2AF",
+      "#89B4FA",
+      "#F5C2E7",
+      "#94E2D5",
+      "#BAC2DE",
+      "#585B70",
+      "#F7AEC2",
+      "#C2ECBF",
+      "#FCD682",
+      "#AECCFC",
+      "#F398DA",
+      "#B1EAE1",
+      "#A6ADC8"
+    ]
+  },
+  "prompt": {
+    "engine": "starship",
+    "file": "catppuccin-powerline.toml"
+  },
+  "accent": "#F5C2E7"
+}

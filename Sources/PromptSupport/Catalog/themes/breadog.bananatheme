@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "breadog",
+  "name": "Breadog",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "0BSD",
+  "source": "https://gitlab.com/warningnonpotablewater/breadog",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Breadog",
+    "background": "#F1EBE6",
+    "foreground": "#362C24",
+    "cursor": "#362C24",
+    "selection": "#362C24",
+    "ansi": [
+      "#362C24",
+      "#B10B00",
+      "#007232",
+      "#8B4C00",
+      "#005CB4",
+      "#9B0097",
+      "#006A78",
+      "#BAA99D",
+      "#514337",
+      "#DE1100",
+      "#008F40",
+      "#AE6000",
+      "#0074E1",
+      "#C300BD",
+      "#008697",
+      "#EAE1DA"
+    ]
+  }
+}

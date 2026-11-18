@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tomorrow-night-eighties",
+  "name": "Tomorrow Night Eighties",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/chriskempson/tomorrow-theme/tree/master/iTerm2",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Tomorrow Night Eighties",
+    "background": "#2D2D2D",
+    "foreground": "#CCCCCC",
+    "cursor": "#CCCCCC",
+    "selection": "#515151",
+    "ansi": [
+      "#000000",
+      "#F2777A",
+      "#99CC99",
+      "#FFCC66",
+      "#6699CC",
+      "#CC99CC",
+      "#66CCCC",
+      "#FFFFFF",
+      "#595959",
+      "#F2777A",
+      "#99CC99",
+      "#FFCC66",
+      "#6699CC",
+      "#CC99CC",
+      "#66CCCC",
+      "#FFFFFF"
+    ]
+  }
+}

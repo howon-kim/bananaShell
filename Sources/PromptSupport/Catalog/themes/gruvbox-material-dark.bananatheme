@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gruvbox-material-dark",
+  "name": "Gruvbox Material Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sainnhe/gruvbox-material",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Gruvbox Material Dark",
+    "background": "#282828",
+    "foreground": "#D4BE98",
+    "cursor": "#D4BE98",
+    "selection": "#D4BE98",
+    "ansi": [
+      "#282828",
+      "#EA6962",
+      "#A9B665",
+      "#D8A657",
+      "#7DAEA3",
+      "#D3869B",
+      "#89B482",
+      "#D4BE98",
+      "#7C6F64",
+      "#EA6962",
+      "#A9B665",
+      "#D8A657",
+      "#7DAEA3",
+      "#D3869B",
+      "#89B482",
+      "#DDC7A1"
+    ]
+  }
+}

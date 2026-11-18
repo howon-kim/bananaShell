@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "galaxy",
+  "name": "Galaxy",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jglovier/galaxy-theme-iterm",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Galaxy",
+    "background": "#1D2837",
+    "foreground": "#FFFFFF",
+    "cursor": "#BBBBBB",
+    "selection": "#B5D5FF",
+    "ansi": [
+      "#000000",
+      "#F9555F",
+      "#21B089",
+      "#FEF02A",
+      "#589DF6",
+      "#944D95",
+      "#1F9EE7",
+      "#BBBBBB",
+      "#555555",
+      "#FA8C8F",
+      "#35BB9A",
+      "#FFFF55",
+      "#589DF6",
+      "#E75699",
+      "#3979BC",
+      "#FFFFFF"
+    ]
+  }
+}

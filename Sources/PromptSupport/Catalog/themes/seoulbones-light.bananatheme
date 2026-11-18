@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "seoulbones-light",
+  "name": "Seoulbones Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Seoulbones Light",
+    "background": "#E2E2E2",
+    "foreground": "#555555",
+    "cursor": "#555555",
+    "selection": "#CCCCCC",
+    "ansi": [
+      "#E2E2E2",
+      "#DC5284",
+      "#628562",
+      "#C48562",
+      "#0084A3",
+      "#896788",
+      "#008586",
+      "#555555",
+      "#A5A0A1",
+      "#BE3C6D",
+      "#487249",
+      "#A76B48",
+      "#006F89",
+      "#7F4C7E",
+      "#006F70",
+      "#777777"
+    ]
+  }
+}

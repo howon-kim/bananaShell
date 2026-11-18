@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-harbor-light",
+  "name": "Lumina Harbor Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Harbor Light",
+    "background": "#FBF5EC",
+    "foreground": "#1C2D4F",
+    "cursor": "#1C2D4F",
+    "selection": "#E3BCCE",
+    "ansi": [
+      "#1C2D4F",
+      "#8C1C1D",
+      "#19784D",
+      "#A25F06",
+      "#0468A4",
+      "#8B499A",
+      "#046871",
+      "#5B7097",
+      "#5D6B7E",
+      "#651F1D",
+      "#00623C",
+      "#874E00",
+      "#005486",
+      "#713B7D",
+      "#00535A",
+      "#7A8FB8"
+    ]
+  }
+}

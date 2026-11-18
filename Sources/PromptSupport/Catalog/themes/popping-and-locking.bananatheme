@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "popping-and-locking",
+  "name": "Popping And Locking",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/hedinne/popping-and-locking-vscode",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Popping And Locking",
+    "background": "#181921",
+    "foreground": "#EBDBB2",
+    "cursor": "#C7C7C7",
+    "selection": "#EBDBB2",
+    "ansi": [
+      "#1D2021",
+      "#CC241D",
+      "#98971A",
+      "#D79921",
+      "#458588",
+      "#B16286",
+      "#689D6A",
+      "#A89984",
+      "#928374",
+      "#F42C3E",
+      "#B8BB26",
+      "#FABD2F",
+      "#99C6CA",
+      "#D3869B",
+      "#7EC16E",
+      "#EBDBB2"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "id": "tokyo-night-storm-posh",
+  "name": "Tokyo Night Storm",
+  "author": "bananaShell",
+  "summary": "Tokyo Night Storm colors and prompt.",
+  "license": "Apache-2.0",
+  "source": "https://github.com/folke/tokyonight.nvim",
+  "tags": [
+    "dark",
+    "oh-my-posh"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "TokyoNight Storm",
+    "background": "#24283B",
+    "foreground": "#C0CAF5",
+    "cursor": "#C0CAF5",
+    "selection": "#364A82",
+    "ansi": [
+      "#1D202F",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#A9B1D6",
+      "#4E5575",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#C0CAF5"
+    ]
+  },
+  "prompt": {
+    "engine": "oh-my-posh",
+    "file": "tokyonight_storm.omp.json"
+  },
+  "accent": "#7AA2F7"
+}

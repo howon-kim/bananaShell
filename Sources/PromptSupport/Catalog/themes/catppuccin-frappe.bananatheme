@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "catppuccin-frappe",
+  "name": "Catppuccin Frappe",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/catppuccin/palette",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Catppuccin Frappe",
+    "background": "#303446",
+    "foreground": "#C6D0F5",
+    "cursor": "#F2D5CF",
+    "selection": "#F2D5CF",
+    "ansi": [
+      "#51576D",
+      "#E78284",
+      "#A6D189",
+      "#E5C890",
+      "#8CAAEE",
+      "#F4B8E4",
+      "#81C8BE",
+      "#B5BFE2",
+      "#626880",
+      "#EDA0A2",
+      "#B9DBA2",
+      "#ECD7AE",
+      "#ADC2F3",
+      "#F38ED8",
+      "#98D2CA",
+      "#A5ADCE"
+    ]
+  }
+}

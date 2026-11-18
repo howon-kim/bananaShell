@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tomorrow-night-burns",
+  "name": "Tomorrow Night Burns",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mbadolato/iTerm2-Color-Schemes/pull/123",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Tomorrow Night Burns",
+    "background": "#151515",
+    "foreground": "#A1B0B8",
+    "cursor": "#FF443E",
+    "selection": "#B0BEC5",
+    "ansi": [
+      "#252525",
+      "#832E31",
+      "#A63C40",
+      "#D3494E",
+      "#FC595F",
+      "#DF9395",
+      "#BA8586",
+      "#F5F5F5",
+      "#5D6F71",
+      "#832E31",
+      "#A63C40",
+      "#D2494E",
+      "#FC595F",
+      "#DF9395",
+      "#BA8586",
+      "#F5F5F5"
+    ]
+  }
+}

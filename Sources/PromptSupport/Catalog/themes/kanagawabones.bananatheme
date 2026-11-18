@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "kanagawabones",
+  "name": "Kanagawabones",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Kanagawabones",
+    "background": "#1F1F28",
+    "foreground": "#DDD8BB",
+    "cursor": "#E6E0C2",
+    "selection": "#49473E",
+    "ansi": [
+      "#1F1F28",
+      "#E46A78",
+      "#98BC6D",
+      "#E5C283",
+      "#7EB3C9",
+      "#957FB8",
+      "#7EB3C9",
+      "#DDD8BB",
+      "#49495E",
+      "#EC818C",
+      "#9EC967",
+      "#F1C982",
+      "#7BC2DF",
+      "#A98FD2",
+      "#7BC2DF",
+      "#A8A48D"
+    ]
+  }
+}

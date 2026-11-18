@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "opencode-light",
+  "name": "OpenCode Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sst/opencode",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "OpenCode Light",
+    "background": "#FFFFFF",
+    "foreground": "#1A1A1A",
+    "cursor": "#D68C27",
+    "selection": "#D4E5FD",
+    "ansi": [
+      "#1A1A1A",
+      "#C20F26",
+      "#1F8C44",
+      "#C7811E",
+      "#226BCC",
+      "#6B47A7",
+      "#077786",
+      "#BEBEBE",
+      "#8A8A8A",
+      "#D1383D",
+      "#3D9A57",
+      "#D68C27",
+      "#3B7DD8",
+      "#7B5BB6",
+      "#318795",
+      "#FFFFFF"
+    ]
+  }
+}

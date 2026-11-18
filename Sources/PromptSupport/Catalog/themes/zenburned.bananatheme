@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zenburned",
+  "name": "Zenburned",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Zenburned",
+    "background": "#404040",
+    "foreground": "#F0E4CF",
+    "cursor": "#F3EADB",
+    "selection": "#746956",
+    "ansi": [
+      "#404040",
+      "#E3716E",
+      "#819B69",
+      "#B77E64",
+      "#6099C0",
+      "#B279A7",
+      "#66A5AD",
+      "#F0E4CF",
+      "#6F6768",
+      "#EC8685",
+      "#8BAE68",
+      "#D68C67",
+      "#61ABDA",
+      "#CF86C1",
+      "#65B8C1",
+      "#C0AB86"
+    ]
+  }
+}

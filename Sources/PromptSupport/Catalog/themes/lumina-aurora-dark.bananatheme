@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-aurora-dark",
+  "name": "Lumina Aurora Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Aurora Dark",
+    "background": "#041212",
+    "foreground": "#D6E3E2",
+    "cursor": "#D6E3E2",
+    "selection": "#1A3E32",
+    "ansi": [
+      "#061717",
+      "#D86F66",
+      "#6CD79D",
+      "#E9D487",
+      "#C5D8ED",
+      "#E7ADE1",
+      "#84D2DB",
+      "#B6C3C2",
+      "#789091",
+      "#E59289",
+      "#A7EAC2",
+      "#FFE791",
+      "#D7EAFF",
+      "#FFC9F9",
+      "#9DECF6",
+      "#D6E3E2"
+    ]
+  }
+}

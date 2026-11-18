@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-deep-contrast-light",
+  "name": "Zacess Deep Contrast Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zacess Deep Contrast Light",
+    "background": "#FFFFFF",
+    "foreground": "#000000",
+    "cursor": "#000000",
+    "selection": "#990098",
+    "ansi": [
+      "#000000",
+      "#CA0000",
+      "#00892E",
+      "#AD6500",
+      "#0040FF",
+      "#CD01CD",
+      "#016E78",
+      "#595959",
+      "#404040",
+      "#D14100",
+      "#00884F",
+      "#907300",
+      "#0D00FF",
+      "#DB009A",
+      "#0178C1",
+      "#000000"
+    ]
+  }
+}

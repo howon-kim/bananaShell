@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "hadal-bloom",
+  "name": "Hadal Bloom",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/hadal-bloom",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Hadal Bloom",
+    "background": "#091923",
+    "foreground": "#D6EAF0",
+    "cursor": "#59D9CB",
+    "selection": "#214454",
+    "ansi": [
+      "#142A35",
+      "#D97494",
+      "#65BFA7",
+      "#C7B87C",
+      "#6E9CD6",
+      "#A995ED",
+      "#4ABFC6",
+      "#BFD6DF",
+      "#42606D",
+      "#F3A0BC",
+      "#87E3C2",
+      "#E7D89D",
+      "#94BEF6",
+      "#C9B5FF",
+      "#76EAF0",
+      "#F1FCFF"
+    ]
+  }
+}

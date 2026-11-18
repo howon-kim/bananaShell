@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "x-bogota",
+  "name": "X Bogota",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/x-bogota",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "X Bogota",
+    "background": "#200B0A",
+    "foreground": "#F7F1FF",
+    "cursor": "#F7F1FF",
+    "selection": "#F7F1FF",
+    "ansi": [
+      "#200B0A",
+      "#FC618D",
+      "#7BD88F",
+      "#FFED89",
+      "#47E6FF",
+      "#FF9999",
+      "#47E6FF",
+      "#F7F1FF",
+      "#525053",
+      "#FC618D",
+      "#7BD88F",
+      "#FFED89",
+      "#47E6FF",
+      "#FF9999",
+      "#47E6FF",
+      "#F7F1FF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sublette",
+  "name": "Sublette",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sublee/sublette",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sublette",
+    "background": "#202535",
+    "foreground": "#CCCED0",
+    "cursor": "#CCCED0",
+    "selection": "#CCCED0",
+    "ansi": [
+      "#253045",
+      "#EE5577",
+      "#55EE77",
+      "#FFDD88",
+      "#5588FF",
+      "#FF77CC",
+      "#44EEEE",
+      "#F5F5DA",
+      "#405570",
+      "#EE6655",
+      "#99EE77",
+      "#FFFF77",
+      "#77BBFF",
+      "#AA88FF",
+      "#55FFBB",
+      "#FFFFEE"
+    ]
+  }
+}

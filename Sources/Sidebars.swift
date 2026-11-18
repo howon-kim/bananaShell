@@ -195,11 +195,7 @@ final class WorkspaceState: ObservableObject {
     let id = UUID()
     @Published var titleDirectory = ""
     @Published var tabColor = shellSurface
-    let addAutomation = PassthroughSubject<Void, Never>()
     let openAutomation = CurrentValueSubject<UUID?, Never>(nil)
-    let generateKey = PassthroughSubject<Void, Never>()
-    let importKey = PassthroughSubject<Void, Never>()
-    let addAPIKey = PassthroughSubject<Void, Never>()
     let focusActivityTerminal = PassthroughSubject<Int, Never>()
     @Published var activityBoards = ActivityBoards() {
         didSet {
@@ -213,6 +209,13 @@ final class WorkspaceState: ObservableObject {
     }
     @Published var activityTerminal: Int?
     @Published var selected: WorkspaceTab = .keys
+    var displayedGrid: ActivityGrid? {
+        switch selected {
+        case .shell: return .single
+        case .activity: return activityBoards.current.grid
+        default: return nil
+        }
+    }
     @Published var tabs: [TabActivity] = [] {
         didSet {
             tabsBySlot = Dictionary(tabs.map { ($0.shortcutSlot, $0) }, uniquingKeysWith: { first, _ in first })
@@ -258,7 +261,7 @@ final class WorkspaceState: ObservableObject {
 }
 
 enum WorkspaceTab: Hashable {
-    case keys, activity, automations, settings, shell(Int)
+    case keys, activity, automations, themes, extensions, settings, shell(Int)
 
     var showsTerminals: Bool {
         switch self {
@@ -390,6 +393,7 @@ struct FavoriteTabs: View {
     @ObservedObject private var drag = WorkspaceTabDrag.shared
     @ObservedObject private var navigationKeys = NavigationKeys.shared
     @ObservedObject var state: WorkspaceState
+    @ObservedObject private var themes = ThemeStore.shared
     let select: (WorkspaceTab) -> Void
     var detach: (Int, NSPoint) -> Void = { _, _ in }
     var receiveDrop: (WorkspaceDragPayload, Int) -> Bool = { _, _ in false }
@@ -412,7 +416,7 @@ struct FavoriteTabs: View {
     }
     private func favorite(_ tab: WorkspaceTab, _ icon: String, _ label: String) -> some View {
         Button { select(tab) } label: {
-            tabBadge(icon, title: tab == .settings && state.selected == tab ? label : nil, selected: state.selected == tab)
+            tabBadge(icon, title: nil, selected: state.selected == tab)
         }.buttonStyle(HoverButtonStyle(cornerRadius: badgeRadius))
          .help(label).accessibilityLabel(label)
          .accessibilityAddTraits(state.selected == tab ? .isSelected : [])
@@ -468,8 +472,6 @@ struct FavoriteTabs: View {
 
     private var primaryRow: some View {
         HStack(spacing: 5) {
-            favorite(.keys, "key", "Keys")
-            favorite(.automations, "clock.arrow.circlepath", "Automations").padding(.trailing, 5)
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
@@ -520,10 +522,26 @@ struct FavoriteTabs: View {
                             }
                             .contextMenu {
                                 Button("Rename Group…") { renaming = board }
+                                Menu("Terminal Colors") {
+                                    let choices: [(String?, String)] = [(nil, "Same as Theme"), (TerminalTheme.defaultScheme, "bananaShell Default")]
+                                        + themes.installed.filter { $0.scheme != nil }.map { ($0.id, $0.name) }
+                                    ForEach(choices.indices, id: \.self) { index in
+                                        let choice = choices[index]
+                                        Button { state.activityBoards.setColorScheme(board.id, to: choice.0) } label: {
+                                            if board.colorScheme == choice.0 { Label(choice.1, systemImage: "checkmark") } else { Text(choice.1) }
+                                        }
+                                    }
+                                    Divider()
+                                    Button("Get More Colors…") { NSApp.sendAction(Selector(("showThemeMarketplace:")), to: nil, from: nil) }
+                                }
                                 Button("Move Group to New Window") { detach(board.id, NSEvent.mouseLocation) }
                                 Button("Close Group") { closeBoard(board.id) }
                             }.transition(TabMotion.insertion).id(board.id)
                         }
+                        Button { state.activityBoards.add(); showBoard(state.activityBoards.selected) } label: {
+                            Image(systemName: "plus").frame(width: 26, height: WorkspaceTabMetrics.height)
+                        }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tab))
+                         .help("New group tab").accessibilityLabel("New group tab")
                     }.animation(TabMotion.settle, value: state.activityBoards.boards.map(\.id))
                 }.onChange(of: state.activityBoards.selected) { proxy.scrollTo($0) }
                  .background(drag.groupTarget == state.id ? sessionAccent.opacity(0.14) : .clear,
@@ -531,22 +549,10 @@ struct FavoriteTabs: View {
                  .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tab).strokeBorder(
                     drag.groupTarget == state.id ? sessionAccent : .clear, lineWidth: 2).allowsHitTesting(false))
             }
-            if state.selected == .keys {
-                Menu {
-                    Button("Generate SSH Key…") { state.generateKey.send() }
-                    Button("Import SSH Public Key…") { state.importKey.send() }
-                    Divider()
-                    Button("Add API Key…") { state.addAPIKey.send() }
-                } label: { Image(systemName: "plus").frame(width: 30, height: WorkspaceTabMetrics.height) }
-                    .menuIndicator(.hidden).menuStyle(.borderlessButton).fixedSize().modifier(ControlHover())
-                    .help("Add SSH or API key").accessibilityLabel("Add key")
-            } else {
-                let automation = state.selected == .automations
-                Button { if automation { state.addAutomation.send() } else { state.activityBoards.add(); showBoard(state.activityBoards.selected) } } label: {
-                    Image(systemName: "plus").frame(width: 30, height: WorkspaceTabMetrics.height)
-                }.help(automation ? "Add Automation" : "New group tab")
-                 .accessibilityLabel(automation ? "Add Automation" : "New group tab")
-            }
+            favorite(.keys, "key", "Keys")
+            favorite(.automations, "clock.arrow.circlepath", "Automations")
+            favorite(.themes, "paintpalette", "Theme Marketplace")
+            favorite(.extensions, "puzzlepiece.extension", "Extension Marketplace")
             favorite(.settings, "gearshape", "Settings").padding(.trailing, 3)
         }
     }
@@ -920,20 +926,25 @@ struct TerminalToolbar: View {
         }
     }
 
-    private var board: ActivityBoard { state.activityBoards.current }
-
     private var terminalRow: some View {
         HStack(spacing: 6) {
             TerminalTabStrip(state: state, select: select, focusTerminal: focusTerminal, close: close, move: move, receivePage: receivePage, receiveTerminal: receiveTerminal)
             Button(action: create) { Image(systemName: "plus").frame(width: 24, height: 26) }
                 .help("New terminal").accessibilityLabel("New terminal")
-            if state.selected == .activity {
+            // Also shown while one terminal is expanded: picking a layout returns
+            // to the grid with that terminal in view and focused.
+            if let displayedGrid = state.displayedGrid {
                 HStack(spacing: 2) {
                     ForEach(ActivityGrid.allCases, id: \.self) { grid in
-                        let selected = grid == board.grid
+                        let selected = grid == displayedGrid
                         Button {
-                            let slot = state.activityTerminal.flatMap { state.tab(id: $0) }?.shortcutSlot
-                            state.activityBoards.setGrid(grid, keeping: slot)
+                            if case .shell(let id) = state.selected {
+                                state.activityBoards.setGrid(grid, keeping: state.tab(id: id)?.shortcutSlot)
+                                focusTerminal(id)
+                            } else {
+                                let slot = state.activityTerminal.flatMap { state.tab(id: $0) }?.shortcutSlot
+                                state.activityBoards.setGrid(grid, keeping: slot)
+                            }
                         } label: {
                             HStack(spacing: 5) {
                                 GridLayoutIcon(columns: grid.columns, rows: grid.rows).frame(width: 14, height: 14)
@@ -1125,7 +1136,7 @@ private struct TerminalTabStrip: View {
             .accessibilityLabel("Close page \(page + 1)")
         }
         .contentShape(Rectangle())
-        .onHover { track(item, inside: $0) }
+        .background { IslandButtonHoverTracker { track(item, inside: $0) } }
         .modifier(TabDragSource(lifted: drag.payload?.isPage == true && sourcePage == page))
         .overlay(alignment: .trailing) {
             if expanded { Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1, height: 16).allowsHitTesting(false) }
@@ -1173,7 +1184,7 @@ private struct TerminalTabStrip: View {
                 .allowsHitTesting(revealsClose(item))
                 .help("Close tab").accessibilityLabel("Close tab")
         }.tabFace(selected: selected)
-         .onHover { track(item, inside: $0) }
+         .background { IslandButtonHoverTracker { track(item, inside: $0) } }
          .modifier(ControlHover(cornerRadius: SurfaceRadius.tab))
          .modifier(TabDragSource(lifted: draggedSlots.contains(tab.shortcutSlot)))
          .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tab).strokeBorder(

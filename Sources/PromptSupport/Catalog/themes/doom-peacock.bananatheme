@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "doom-peacock",
+  "name": "Doom Peacock",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/doomemacs/themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Doom Peacock",
+    "background": "#2B2A27",
+    "foreground": "#EDE0CE",
+    "cursor": "#9C9C9D",
+    "selection": "#A60033",
+    "ansi": [
+      "#1C1F24",
+      "#CB4B16",
+      "#26A6A6",
+      "#BCD42A",
+      "#2A6CC6",
+      "#A9A1E1",
+      "#5699AF",
+      "#EDE0CE",
+      "#51504D",
+      "#FF5D38",
+      "#98BE65",
+      "#E6F972",
+      "#51AFEF",
+      "#C678DD",
+      "#46D9FF",
+      "#DFDFDF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "cobalt-next-minimal",
+  "name": "Cobalt Next Minimal",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/davidleininger/cobaltnext-vscode",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Cobalt Next Minimal",
+    "background": "#0B1C24",
+    "foreground": "#D7DEEA",
+    "cursor": "#37B5B4",
+    "selection": "#37B5B4",
+    "ansi": [
+      "#323D47",
+      "#FF657A",
+      "#8CC98F",
+      "#FFC64C",
+      "#409DD4",
+      "#CBA3C7",
+      "#37B5B4",
+      "#D7DEEA",
+      "#62747F",
+      "#E47E8B",
+      "#BADDBB",
+      "#FFDC91",
+      "#7AC0EB",
+      "#F3CCEF",
+      "#84E4E3",
+      "#FFFFFF"
+    ]
+  }
+}

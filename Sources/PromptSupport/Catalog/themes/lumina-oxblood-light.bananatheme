@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-oxblood-light",
+  "name": "Lumina Oxblood Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Oxblood Light",
+    "background": "#FEF2F4",
+    "foreground": "#42222F",
+    "cursor": "#42222F",
+    "selection": "#E6B8CB",
+    "ansi": [
+      "#42222F",
+      "#9B2827",
+      "#237742",
+      "#A1600A",
+      "#3166A6",
+      "#82469D",
+      "#087380",
+      "#8A6472",
+      "#7D5D68",
+      "#732926",
+      "#0F6131",
+      "#874E00",
+      "#1C5290",
+      "#683A7D",
+      "#005D68",
+      "#AB8392"
+    ]
+  }
+}

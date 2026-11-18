@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-canopy-light",
+  "name": "Lumina Canopy Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Canopy Light",
+    "background": "#F1F9EF",
+    "foreground": "#1E3323",
+    "cursor": "#1E3323",
+    "selection": "#CECDA8",
+    "ansi": [
+      "#1E3323",
+      "#860C2C",
+      "#337545",
+      "#905705",
+      "#046AA7",
+      "#864C82",
+      "#007184",
+      "#5E7563",
+      "#5B6F5D",
+      "#5B1D26",
+      "#206033",
+      "#764600",
+      "#0E5686",
+      "#70396C",
+      "#005B6B",
+      "#7D9582"
+    ]
+  }
+}

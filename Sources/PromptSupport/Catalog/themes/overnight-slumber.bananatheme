@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "overnight-slumber",
+  "name": "Overnight Slumber",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/cevr/overnight",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Overnight Slumber",
+    "background": "#0E1729",
+    "foreground": "#CED2D6",
+    "cursor": "#FFA7C4",
+    "selection": "#1F2B41",
+    "ansi": [
+      "#0A1222",
+      "#FFA7C4",
+      "#85CC95",
+      "#FFCB8B",
+      "#8DABE1",
+      "#C792EB",
+      "#78CCF0",
+      "#FFFFFF",
+      "#575656",
+      "#FFA7C4",
+      "#85CC95",
+      "#FFCB8B",
+      "#8DABE1",
+      "#C792EB",
+      "#FFA7C4",
+      "#FFFFFF"
+    ]
+  }
+}

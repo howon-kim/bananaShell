@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "github-dark",
+  "name": "GitHub Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/primer/github-vscode-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "GitHub Dark",
+    "background": "#101216",
+    "foreground": "#8B949E",
+    "cursor": "#C9D1D9",
+    "selection": "#3B5070",
+    "ansi": [
+      "#000000",
+      "#F78166",
+      "#56D364",
+      "#E3B341",
+      "#6CA4F8",
+      "#DB61A2",
+      "#2B7489",
+      "#FFFFFF",
+      "#4D4D4D",
+      "#F78166",
+      "#56D364",
+      "#E3B341",
+      "#6CA4F8",
+      "#DB61A2",
+      "#2B7489",
+      "#FFFFFF"
+    ]
+  }
+}

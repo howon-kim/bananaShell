@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-mane",
+  "name": "Rainbows and Unicorns Mane",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Mane",
+    "background": "#14131A",
+    "foreground": "#E9E7F2",
+    "cursor": "#FFD65A",
+    "selection": "#9230AA",
+    "ansi": [
+      "#24222E",
+      "#EB413A",
+      "#68C44A",
+      "#FEDE3C",
+      "#3092E2",
+      "#B866D6",
+      "#45C8C0",
+      "#C8CAE4",
+      "#6E6A82",
+      "#FA821E",
+      "#8FDB74",
+      "#FFE978",
+      "#62B0F0",
+      "#F0A0BE",
+      "#7FE0D8",
+      "#FFFFFF"
+    ]
+  }
+}

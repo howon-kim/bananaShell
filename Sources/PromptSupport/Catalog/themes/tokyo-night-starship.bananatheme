@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "id": "tokyo-night-starship",
+  "name": "Tokyo Night",
+  "author": "bananaShell",
+  "summary": "Tokyo Night colors with the Starship preset.",
+  "license": "Apache-2.0",
+  "source": "https://github.com/folke/tokyonight.nvim",
+  "tags": [
+    "dark",
+    "starship"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "TokyoNight Night",
+    "background": "#1A1B26",
+    "foreground": "#C0CAF5",
+    "cursor": "#C0CAF5",
+    "selection": "#283457",
+    "ansi": [
+      "#15161E",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#A9B1D6",
+      "#414868",
+      "#F7768E",
+      "#9ECE6A",
+      "#E0AF68",
+      "#7AA2F7",
+      "#BB9AF7",
+      "#7DCFFF",
+      "#C0CAF5"
+    ]
+  },
+  "prompt": {
+    "engine": "starship",
+    "file": "tokyo-night.toml"
+  },
+  "accent": "#7AA2F7"
+}

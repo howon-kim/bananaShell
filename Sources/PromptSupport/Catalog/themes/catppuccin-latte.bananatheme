@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "catppuccin-latte",
+  "name": "Catppuccin Latte",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/catppuccin/palette",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Catppuccin Latte",
+    "background": "#EFF1F5",
+    "foreground": "#4C4F69",
+    "cursor": "#DC8A78",
+    "selection": "#DC8A78",
+    "ansi": [
+      "#BCC0CC",
+      "#D20F39",
+      "#40A02B",
+      "#DF8E1D",
+      "#1E66F5",
+      "#EA76CB",
+      "#179299",
+      "#5C5F77",
+      "#ACB0BE",
+      "#E7103F",
+      "#46B02F",
+      "#E49931",
+      "#3878F6",
+      "#EF95D7",
+      "#19A1A8",
+      "#6C6F85"
+    ]
+  }
+}

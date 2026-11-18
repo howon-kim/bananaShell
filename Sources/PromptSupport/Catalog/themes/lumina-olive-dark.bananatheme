@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-olive-dark",
+  "name": "Lumina Olive Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Olive Dark",
+    "background": "#1A1B0C",
+    "foreground": "#E1DFCE",
+    "cursor": "#E1DFCE",
+    "selection": "#3D4224",
+    "ansi": [
+      "#1F200F",
+      "#D3726A",
+      "#B5D5C6",
+      "#EBC27C",
+      "#A2C4F0",
+      "#D5A2D0",
+      "#8BCFD7",
+      "#C1BFAE",
+      "#8C8C76",
+      "#E0938C",
+      "#B5F7DA",
+      "#FFDEA7",
+      "#C4DDFF",
+      "#F0BBEB",
+      "#A3E9F2",
+      "#E1DFCE"
+    ]
+  }
+}

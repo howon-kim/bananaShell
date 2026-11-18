@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftTerm
 import SwiftUI
 import Carbon
@@ -23,7 +24,9 @@ private let promptFontName: String = {
 }()
 
 func terminalFont(size: CGFloat) -> NSFont {
-    let base = NSFont(name: promptFontName, size: size) ?? NSFont(name: "JetBrainsMono-Regular", size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+    // A theme's font applies only when it is installed.
+    let themed = UserDefaults.standard.string(forKey: ThemeKey.font).flatMap { NSFont(name: $0, size: size) }
+    let base = themed ?? NSFont(name: promptFontName, size: size) ?? NSFont(name: "JetBrainsMono-Regular", size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
     // Starship mixes Nerd Font icons with Unicode symbols and color emoji.
     let cascade = ["AppleSymbols", "AppleColorEmoji"].map { NSFontDescriptor(name: $0, size: size) }
     return NSFont(descriptor: base.fontDescriptor.addingAttributes([.cascadeList: cascade]), size: size) ?? base
@@ -185,7 +188,7 @@ private struct TerminalStatus: Sendable {
     let limits: [String]
 
     static func capture(_ panes: [PersistentTerminal.Pane], directory: URL, server: PersistentTerminal? = nil) -> [UUID: TerminalStatus] {
-        Dictionary(uniqueKeysWithValues: panes.map { pane in
+        Dictionary(panes.map { pane in
             let group = pane.foregroundProcessGroup
             let busy = group > 0 && group != pane.pid
             var buffer = [CChar](repeating: 0, count: 1024)
@@ -198,7 +201,7 @@ private struct TerminalStatus: Sendable {
             }
             let limits = icon == "claude" ? ClaudeLimits.rows(at: directory.appendingPathComponent("limits-\(pane.id.uuidString)-\(group)")) : []
             return (pane.id, TerminalStatus(pane: pane, busy: busy, status: status, icon: icon, limits: limits))
-        })
+        }, uniquingKeysWith: { first, _ in first })
     }
 }
 
@@ -224,16 +227,21 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
         self.owner = owner
         super.init()
         buildWindow()
+        // Terminals take their group's colors when groups change or terminals move.
+        schemeWatch = workspace.$activityBoards
+            .map { $0.boards.map { [String($0.id), $0.colorScheme ?? ""] + $0.slots.map(String.init) } }
+            .removeDuplicates()
+            .sink { [weak self] _ in DispatchQueue.main.async { self?.applySchemes() } }
     }
+    private var schemeWatch: AnyCancellable?
     private var sessions: [Session] = []
     private let workspace = WorkspaceState()
     private let body = WorkspaceContentView()
     private var tabBarHeight: NSLayoutConstraint!
     private let navigationItem = NSToolbarItem.Identifier("bananaShell.navigation")
     private var window: ShellWindow!
-    private lazy var keys = themedHost(rootView: PublicKeyPanel(generateRequest: workspace.generateKey, importRequest: workspace.importKey,
-                                                                 apiKeyRequest: workspace.addAPIKey))
-    private lazy var automations = themedHost(rootView: AutomationPanel(addRequest: workspace.addAutomation, openRequest: workspace.openAutomation))
+    private lazy var keys = themedHost(rootView: PublicKeyPanel())
+    private lazy var automations = themedHost(rootView: AutomationPanel(openRequest: workspace.openAutomation))
     private lazy var activity: NSHostingView<ThemedRoot<ActivityPanel>> = themedHost(rootView: ActivityPanel(state: workspace, terminalView: { [weak self] id in
         self?.sessions.first(where: { $0.id == id })?.view
     }, close: { [weak self] in self?.removeShell($0) }, create: { [weak self] in self?.createTerminalTab(selecting: false) },
@@ -257,6 +265,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
         case .settings: panel = "settings"
         case .activity: panel = "activity"
         case .automations: panel = "automations"
+        case .themes: panel = "themes"
+        case .extensions: panel = "extensions"
         case .shell: panel = nil
         }
         let directories = sessions.map(\.directory)
@@ -306,23 +316,30 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
                                   persistentID: pane?.id ?? id, recreating: pane == nil && id != nil)
                 if let pane { remaining.removeAll { $0.id == pane.id } }
             }
+        } else {
+            // Lay out the group before starting its first PTY at the tile's size.
+            select(.activity)
         }
         for pane in remaining {
             createTerminalTab(selecting: false, directory: pane.directory, restoredSlot: pane.slot, persistentID: pane.id)
         }
         if sessions.isEmpty && snapshot?.directories.isEmpty != true { createTerminalTab(selecting: false) }
-        var boards = snapshot?.activityBoards ?? ActivityBoards()
+        guard let snapshot else {
+            if let first = sessions.first { focusTerminalInGrid(first.id) }
+            return
+        }
+        var boards = snapshot.activityBoards ?? ActivityBoards()
         boards.reconcile(with: sessions.map(\.shortcutSlot))
         workspace.activityBoards = boards
         guard !sessions.isEmpty else { select(.activity); return }
-        if let slot = snapshot?.activityFocusedSlot, boards.current.visibleSlots.contains(slot) {
+        if let slot = snapshot.activityFocusedSlot, boards.current.visibleSlots.contains(slot) {
             workspace.activityTerminal = sessions.first { $0.shortcutSlot == slot }?.id
         }
-        let lastIndex = snapshot?.lastShellIndex ?? 0
-        let lastPersistentID = snapshot?.persistentIDs.flatMap { $0.indices.contains(lastIndex) ? $0[lastIndex] : nil }
+        let lastIndex = snapshot.lastShellIndex
+        let lastPersistentID = snapshot.persistentIDs.flatMap { $0.indices.contains(lastIndex) ? $0[lastIndex] : nil }
         lastShell = sessions.first { $0.persistentID == lastPersistentID }?.id ??
             sessions[sessions.indices.contains(lastIndex) ? lastIndex : 0].id
-        if let panel = snapshot?.panel, let tab = ["keys": WorkspaceTab.keys, "activity": .activity, "settings": .settings, "automations": .automations][panel] {
+        if let panel = snapshot.panel, let tab = ["keys": WorkspaceTab.keys, "activity": .activity, "settings": .settings, "automations": .automations, "themes": .themes, "extensions": .extensions][panel] {
             select(tab)
         } else if let lastShell { select(.shell(lastShell)) }
     }
@@ -451,7 +468,7 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
                 sessions.first { $0.shortcutSlot == slot }.map { session in
                     let name = URL(fileURLWithPath: session.directory).lastPathComponent
                     return NotchTerminalTarget(id: session.persistentID, title: name.isEmpty ? session.title : name,
-                                               background: session.view.nativeBackgroundColor)
+                                               background: session.view.nativeBackgroundColor, scheme: scheme(of: session))
                 }
             })
         }
@@ -521,7 +538,10 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     }
 
     private lazy var settings = themedHost(rootView: PromptSettings { [weak self] in self?.owner?.applyTheme() })
+    private lazy var themes = themedHost(rootView: ThemeMarketplaceView())
+    private lazy var extensions = themedHost(rootView: ExtensionMarketplaceView())
     @objc func showPromptSettings(_ sender: Any?) { select(.settings) }
+    func showMarketplace(_ tab: WorkspaceTab) { select(tab); show() }
 
     private func writeTheme() throws {
         try FileManager.default.createDirectory(at: themeDirectory, withIntermediateDirectories: true,
@@ -537,12 +557,30 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let color = PromptSetup.background(forShell: shell)
         do { try writeTheme() } catch { NSLog("Could not update prompt: %@", error.localizedDescription); return }
+        let font = terminalFont(size: 14)
         for session in sessions {
-            session.view.nativeBackgroundColor = color
+            if session.view.font.fontName != font.fontName { session.view.font = font }
             refreshPrompt(session.id)
         }
-        workspace.tabColor = color
-        window.backgroundColor = color
+        applySchemes()
+        let surface = ThemeStore.shared.scheme(for: nil)?.backgroundColor ?? color
+        workspace.tabColor = surface
+        window.backgroundColor = surface
+    }
+
+    /// Terminal colors only: each group's own scheme, else the theme's.
+    func applySchemes() {
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        let fallback = PromptSetup.background(forShell: shell)
+        let boards = workspace.activityBoards.boards
+        for session in sessions {
+            let choice = boards.first { $0.slots.contains(session.shortcutSlot) }?.colorScheme
+            TerminalTheme.apply(ThemeStore.shared.scheme(for: choice), to: session.view, defaultBackground: fallback)
+        }
+    }
+
+    private func scheme(of session: Session) -> ThemeScheme? {
+        ThemeStore.shared.scheme(for: workspace.activityBoards.boards.first { $0.slots.contains(session.shortcutSlot) }?.colorScheme)
     }
 
     func detachTerminals() {
@@ -808,6 +846,11 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
             terminal.processDelegate = self
             let persistentID = session.persistentID
             terminal.leaveScrollback = { server.leaveCopyMode(persistentID) }
+            terminal.contextActions = TerminalContextActions(
+                wantsMouse: { server.wantsMouse(persistentID) },
+                directory: { [weak session] in session?.directory },
+                clearScrollback: { server.clearScrollback(persistentID) },
+                inCopyMode: { server.inCopyMode(persistentID) })
             if selecting { select(.shell(serial)) }
             terminal.startProcess(executable: server.executable.path, args: server.attachment(session.persistentID),
                                   environment: Terminal.getEnvironmentVariables(), currentDirectory: FileManager.default.homeDirectoryForCurrentUser.path)
@@ -837,6 +880,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
         case .keys: view = keys
         case .activity: view = activity
         case .automations: view = automations
+        case .themes: view = themes
+        case .extensions: view = extensions
         case .shell(let id):
             guard let session = sessions.first(where: { $0.id == id }) else { return }
             workspace.activityBoards.reveal(session.shortcutSlot)
@@ -938,8 +983,9 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
             return
         }
         // A nil board ID denotes a utility tab; each grid has its own stop.
-        let tabs: [(WorkspaceTab, Int?)] = [(.keys, nil), (.automations, nil)] +
-            workspace.activityBoards.boards.map { (.activity, $0.id) } + [(.settings, nil)]
+        // Same order as the bar: group tabs, then the utility tabs on the right.
+        let tabs: [(WorkspaceTab, Int?)] = workspace.activityBoards.boards.map { (.activity, $0.id) }
+            + [(.keys, nil), (.automations, nil), (.themes, nil), (.extensions, nil), (.settings, nil)]
         let i = tabs.firstIndex { $0.0 == workspace.selected && ($0.1 == nil || $0.1 == workspace.activityBoards.selected) } ?? 0
         let next = tabs[(i + step + tabs.count) % tabs.count]
         if let id = next.1 { workspace.activityTerminal = nil; workspace.activityBoards.select(id) }
@@ -1077,6 +1123,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        ThemeStore.shared.changed = { [weak self] in self?.applyTheme() }
+        ThemeStore.shared.followAppearance()
         confirmations.openAutomation = { [weak self] id in
             guard let self else { return }
             self.ensureWorkspace().openAutomation(id)
@@ -1279,6 +1327,38 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     }
 
     @objc func showPromptSettings(_ sender: Any?) { ensureWorkspace().showPromptSettings(sender) }
+
+    @objc func showThemeMarketplace(_ sender: Any?) { openMarketplace(.themes) }
+    @objc func showExtensionMarketplace(_ sender: Any?) { openMarketplace(.extensions) }
+
+    /// The marketplace is a sidebar tab of the active window.
+    private func openMarketplace(_ tab: WorkspaceTab) {
+        (activeWindow ?? ensureWorkspace()).showMarketplace(tab)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// `.bananatheme` files and `bananashell://theme?id=…` or `?url=https://…` links.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            if url.isFileURL {
+                do { ThemeStore.shared.pending = try ThemeStore.importTheme(from: url); openMarketplace(.themes) }
+                catch { presentThemeError(error) }
+            } else if url.scheme?.lowercased() == "bananashell", url.host?.lowercased() == "theme" {
+                Task { @MainActor in
+                    do { ThemeStore.shared.pending = try await ThemeStore.shared.resolve(link: url); openMarketplace(.themes) }
+                    catch { presentThemeError(error) }
+                }
+            }
+        }
+    }
+
+    private func presentThemeError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "The theme could not be opened."
+        alert.informativeText = error.localizedDescription
+        alert.runModal()
+    }
+
     @objc func toggleNotchTerminal(_ sender: Any?) { notchTerminal.toggle() }
     @objc func newGroup(_ sender: Any?) { ensureWorkspace().newGroup(sender) }
     @objc func newPage(_ sender: Any?) { ensureWorkspace().newPage(sender) }
@@ -1289,7 +1369,9 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     @objc func selectTab(_ sender: NSMenuItem) { activeWindow?.selectTab(sender) }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(newWindow(_:)) || menuItem.action == #selector(showPromptSettings(_:)) { return true }
+        if menuItem.action == #selector(newWindow(_:)) || menuItem.action == #selector(showPromptSettings(_:))
+            || menuItem.action == #selector(showThemeMarketplace(_:))
+            || menuItem.action == #selector(showExtensionMarketplace(_:)) { return true }
         if menuItem.action == #selector(toggleNotchTerminal(_:)) { return terminalServer != nil }
         return activeWindow?.validateMenuItem(menuItem) ?? false
     }
@@ -1310,6 +1392,11 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
+// After every top-level global above is initialized (fonts, colors).
+#if DEBUG
+MainActor.assumeIsolated { DebugSnapshots.renderIfRequested() }
+#endif
+
 MainActor.assumeIsolated {
     let app = NSApplication.shared
     let delegate = AppDelegate()
@@ -1317,7 +1404,7 @@ MainActor.assumeIsolated {
     app.setActivationPolicy(.regular)
     let menu = NSMenu()
     for (name, items) in [
-        ("bananaShell", [("About bananaShell", "orderFrontStandardAboutPanel:", ""), ("Check for Updates…", "checkForUpdates:", ""), ("Prompt Settings…", "showPromptSettings:", ","), ("Quit bananaShell", "terminate:", "q")]),
+        ("bananaShell", [("About bananaShell", "orderFrontStandardAboutPanel:", ""), ("Check for Updates…", "checkForUpdates:", ""), ("Prompt Settings…", "showPromptSettings:", ","), ("Theme Marketplace…", "showThemeMarketplace:", ""), ("Extension Marketplace…", "showExtensionMarketplace:", ""), ("Quit bananaShell", "terminate:", "q")]),
         ("Shell", [("New Window", "newWindow:", CreationKeys.shared.windowKey), ("New Group", "newGroup:", CreationKeys.shared.key("Group")), ("New Page", "newPage:", CreationKeys.shared.key("Page")), ("New Terminal", "newTab:", CreationKeys.shared.key("Terminal")), ("Close Tab", "closeTab:", "w"), ("Notch Terminal", "toggleNotchTerminal:", "`"),
                    ("Next Tab", "nextTab:", "}"), ("Previous Tab", "previousTab:", "{")]),
         ("Edit", [("Copy", "copy:", "c"), ("Paste", "paste:", "v")])

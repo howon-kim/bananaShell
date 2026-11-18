@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "brogrammer",
+  "name": "Brogrammer",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "WTFPL",
+  "source": "https://github.com/bahlo/iterm-colors",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Brogrammer",
+    "background": "#131313",
+    "foreground": "#D6DBE5",
+    "cursor": "#B9B9B9",
+    "selection": "#1F1F1F",
+    "ansi": [
+      "#1F1F1F",
+      "#F81118",
+      "#2DC55E",
+      "#ECBA0F",
+      "#2A84D2",
+      "#4E5AB7",
+      "#1081D6",
+      "#D6DBE5",
+      "#D6DBE5",
+      "#DE352E",
+      "#1DD361",
+      "#F3BD09",
+      "#1081D6",
+      "#5350B9",
+      "#0F7DDB",
+      "#FFFFFF"
+    ]
+  }
+}

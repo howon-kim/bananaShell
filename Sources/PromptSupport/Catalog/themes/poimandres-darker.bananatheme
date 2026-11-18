@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "poimandres-darker",
+  "name": "Poimandres Darker",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/drcmda/poimandres-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Poimandres Darker",
+    "background": "#16161E",
+    "foreground": "#A6ACCD",
+    "cursor": "#FFFFFF",
+    "selection": "#A6ACCD",
+    "ansi": [
+      "#16161E",
+      "#D0679D",
+      "#5DE4C7",
+      "#FFFAC2",
+      "#89DDFF",
+      "#FCC5E9",
+      "#ADD7FF",
+      "#FFFFFF",
+      "#A6ACCD",
+      "#D0679D",
+      "#5DE4C7",
+      "#FFFAC2",
+      "#ADD7FF",
+      "#FAE4FC",
+      "#89DDFF",
+      "#FFFFFF"
+    ]
+  }
+}

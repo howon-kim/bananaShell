@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gruber-darker",
+  "name": "Gruber Darker",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/rexim/gruber-darker-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Gruber Darker",
+    "background": "#181818",
+    "foreground": "#E4E4EF",
+    "cursor": "#FFDD33",
+    "selection": "#FFFFFF",
+    "ansi": [
+      "#181818",
+      "#F43841",
+      "#73C936",
+      "#FFDD33",
+      "#96A6C8",
+      "#9E95C7",
+      "#95A99F",
+      "#E4E4EF",
+      "#52494E",
+      "#FF4F58",
+      "#73C936",
+      "#FFDD33",
+      "#96A6C8",
+      "#AFAFD7",
+      "#95A99F",
+      "#F5F5F5"
+    ]
+  }
+}

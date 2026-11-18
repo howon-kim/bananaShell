@@ -1,0 +1,45 @@
+name: Theme catalog
+
+on:
+  pull_request:
+    paths:
+      - "Sources/PromptSupport/Catalog/**"
+      - "Scripts/theme-catalog.py"
+  push:
+    branches: [main]
+    paths:
+      - "Sources/PromptSupport/Catalog/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate theme files
+        run: |
+          shopt -s nullglob
+          python3 -I Scripts/theme-catalog.py validate \
+            Sources/PromptSupport/Catalog/themes/*.bananatheme \
+            Sources/PromptSupport/Catalog/community/*.bananatheme
+      - name: Check the index lists every community theme
+        run: |
+          python3 -I - <<'EOF'
+          import hashlib, json, os, sys
+          root = "Sources/PromptSupport/Catalog"
+          index = json.load(open(os.path.join(root, "index.json")))
+          listed = {e["file"]: e["sha256"] for e in index["themes"]}
+          problems = []
+          for folder in ("themes", "community"):
+              for name in sorted(os.listdir(os.path.join(root, folder))):
+                  if not name.endswith(".bananatheme"):
+                      continue
+                  rel = folder + "/" + name
+                  digest = hashlib.sha256(open(os.path.join(root, rel), "rb").read()).hexdigest()
+                  if listed.get(rel) != digest:
+                      problems.append(rel)
+          if problems:
+              sys.exit("Rebuild the index (Scripts/theme-catalog.py build): " + ", ".join(problems))
+          EOF

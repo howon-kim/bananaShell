@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-vhs",
+  "name": "Rainbows and Unicorns VHS",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns VHS",
+    "background": "#101B45",
+    "foreground": "#F2EBDD",
+    "cursor": "#F2EBDD",
+    "selection": "#F2EBDD",
+    "ansi": [
+      "#0A1230",
+      "#FF6B6B",
+      "#8FE3A0",
+      "#F7D774",
+      "#7FB2FF",
+      "#D59CFF",
+      "#7FE3E0",
+      "#D6D0C2",
+      "#6F7BA8",
+      "#FFA862",
+      "#B5F0C1",
+      "#FBE6A3",
+      "#ABCDFF",
+      "#E5C2FF",
+      "#AEF0EE",
+      "#FFFFFF"
+    ]
+  }
+}

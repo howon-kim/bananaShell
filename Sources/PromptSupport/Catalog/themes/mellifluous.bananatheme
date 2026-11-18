@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "mellifluous",
+  "name": "Mellifluous",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/ramojus/mellifluous.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Mellifluous",
+    "background": "#1A1A1A",
+    "foreground": "#DADADA",
+    "cursor": "#BFAD9E",
+    "selection": "#2D2D2D",
+    "ansi": [
+      "#1A1A1A",
+      "#D29393",
+      "#B3B393",
+      "#CBAA89",
+      "#A8A1BE",
+      "#B39FB0",
+      "#C0AF8C",
+      "#DADADA",
+      "#5B5B5B",
+      "#C95954",
+      "#828040",
+      "#A6794C",
+      "#5A6599",
+      "#9C6995",
+      "#74A39E",
+      "#FFFFFF"
+    ]
+  }
+}

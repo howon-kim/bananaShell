@@ -467,18 +467,11 @@ struct PublicKeyPanel: View {
             switch self { case .ssh: return "ssh"; case .api(let key): return "api:" + (key?.id.uuidString ?? "new") }
         }
     }
-    let generateRequest: PassthroughSubject<Void, Never>
-    let importRequest: PassthroughSubject<Void, Never>
-    let apiKeyRequest: PassthroughSubject<Void, Never>
     let folder: URL
     let apiKeyStore: APIKeyStore
     init(folder: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh"),
-         generateRequest: PassthroughSubject<Void, Never> = .init(), importRequest: PassthroughSubject<Void, Never> = .init(),
-         apiKeyRequest: PassthroughSubject<Void, Never> = .init(), apiKeyStore: APIKeyStore = .init()) {
+         apiKeyStore: APIKeyStore = .init()) {
         self.folder = folder
-        self.generateRequest = generateRequest
-        self.importRequest = importRequest
-        self.apiKeyRequest = apiKeyRequest
         self.apiKeyStore = apiKeyStore
     }
     @State private var keys: [PublicIdentity] = []
@@ -543,7 +536,13 @@ struct PublicKeyPanel: View {
                         Text("SSH public keys · API keys in Keychain").font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize + 1, relativeTo: .caption)).foregroundStyle(.secondary)
                     }
                     Spacer()
-
+                    Menu {
+                        Button("Generate SSH Key…") { editor = .ssh }
+                        Button("Import SSH Public Key…") { importKey() }
+                        Divider()
+                        Button("Add API Key…") { editor = .api(nil) }
+                    } label: { Label("Add Key", systemImage: "plus") }
+                        .fixedSize()
                 }
                 if !notice.isEmpty { Text(notice).font(.callout).foregroundStyle(.orange) }
                 if !apiNotice.isEmpty { Text(apiNotice).font(.callout).foregroundStyle(.orange) }
@@ -553,7 +552,7 @@ struct PublicKeyPanel: View {
                     VStack(spacing: 12) {
                         Image(systemName: "key").font(.largeTitle).foregroundStyle(.secondary)
                         Text("No keys yet").font(.headline)
-                        Text("Use + in the tab bar to add an SSH or API key.").foregroundStyle(.secondary)
+                        Text("Choose Add Key to add an SSH or API key.").foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     HStack(alignment: .top, spacing: 16) {
@@ -595,9 +594,6 @@ struct PublicKeyPanel: View {
             }.padding(20)
         }.onAppear(perform: reload)
         .onDisappear { apiRefresh?.cancel() }
-        .onReceive(generateRequest) { editor = .ssh }
-        .onReceive(importRequest) { importKey() }
-        .onReceive(apiKeyRequest) { editor = .api(nil) }
         .sheet(item: $editor) { item in
             switch item {
             case .ssh:

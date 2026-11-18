@@ -1,0 +1,39 @@
+name: Submit a theme
+description: Share a bananaShell theme for the Theme Marketplace catalog.
+title: "[theme] "
+labels: ["theme", "submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a theme! In bananaShell, open **Theme Marketplace › Share Current › Submit to Catalog…**.
+        It saves your current setup as a `.bananatheme` file and opens this form. Attach that file below.
+        You can check it first with `Scripts/theme-catalog.py validate your.bananatheme`.
+  - type: textarea
+    id: file
+    attributes:
+      label: Theme file
+      description: Drag the .bananatheme file here.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What it looks like and what it's good for.
+  - type: input
+    id: license
+    attributes:
+      label: License
+      description: The theme must allow redistribution (for example MIT or CC0-1.0). Name the original author if it is based on someone else's colors.
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checks
+      options:
+        - label: The prompt does not run shell commands (no Starship `custom` modules or Oh My Posh `command` segments).
+          required: true
+        - label: I made this theme or have the right to share it under the license above.
+          required: true

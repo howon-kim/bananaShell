@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "nephrite-forest",
+  "name": "Nephrite Forest",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/Nephrite-theme/terminal",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Nephrite Forest",
+    "background": "#0D1C14",
+    "foreground": "#E0EBE5",
+    "cursor": "#4DBF74",
+    "selection": "#324139",
+    "ansi": [
+      "#25342C",
+      "#FFA09C",
+      "#4DBF74",
+      "#D9BB5C",
+      "#89C3FE",
+      "#D0AAFC",
+      "#43D5DC",
+      "#B4C1BA",
+      "#76847C",
+      "#FFA09C",
+      "#5ED7B5",
+      "#D9BB5C",
+      "#89C3FE",
+      "#F99DC6",
+      "#43D5DC",
+      "#E0EBE5"
+    ]
+  }
+}

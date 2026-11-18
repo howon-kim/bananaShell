@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "smyck",
+  "name": "Smyck",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/hukl/Smyck-Color-Scheme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Smyck",
+    "background": "#1B1B1B",
+    "foreground": "#F7F7F7",
+    "cursor": "#BBBBBB",
+    "selection": "#207483",
+    "ansi": [
+      "#000000",
+      "#B84131",
+      "#7DA900",
+      "#C4A500",
+      "#62A3C4",
+      "#BA8ACC",
+      "#207383",
+      "#A1A1A1",
+      "#7A7A7A",
+      "#D6837C",
+      "#C4F137",
+      "#FEE14D",
+      "#8DCFF0",
+      "#F79AFF",
+      "#6AD9CF",
+      "#F7F7F7"
+    ]
+  }
+}

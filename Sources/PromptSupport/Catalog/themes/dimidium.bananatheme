@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "dimidium",
+  "name": "Dimidium",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "Zlib",
+  "source": "https://github.com/dofuuz/dimidium",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Dimidium",
+    "background": "#141414",
+    "foreground": "#BAB7B6",
+    "cursor": "#37E57B",
+    "selection": "#8DB8E5",
+    "ansi": [
+      "#000000",
+      "#CF494C",
+      "#60B442",
+      "#DB9C11",
+      "#0575D8",
+      "#AF5ED2",
+      "#1DB6BB",
+      "#BAB7B6",
+      "#817E7E",
+      "#FF643B",
+      "#37E57B",
+      "#FCCD1A",
+      "#688DFD",
+      "#ED6FE9",
+      "#32E0FB",
+      "#DEE3E4"
+    ]
+  }
+}

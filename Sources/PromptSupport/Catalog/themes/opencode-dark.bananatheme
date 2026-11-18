@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "opencode-dark",
+  "name": "OpenCode Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sst/opencode",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "OpenCode Dark",
+    "background": "#0A0A0A",
+    "foreground": "#EEEEEE",
+    "cursor": "#FAB283",
+    "selection": "#3D1D06",
+    "ansi": [
+      "#1E1E1E",
+      "#E06C75",
+      "#7FD88F",
+      "#F5A742",
+      "#5C9CF5",
+      "#9D7CD8",
+      "#56B6C2",
+      "#EEEEEE",
+      "#808080",
+      "#FD7E87",
+      "#96F7A7",
+      "#FAB283",
+      "#82B4FB",
+      "#B38FF4",
+      "#68D0DD",
+      "#FFFFFF"
+    ]
+  }
+}

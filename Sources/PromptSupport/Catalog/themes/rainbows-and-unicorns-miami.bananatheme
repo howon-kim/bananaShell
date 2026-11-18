@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-miami",
+  "name": "Rainbows and Unicorns Miami",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns Miami",
+    "background": "#1B1433",
+    "foreground": "#F9ECF5",
+    "cursor": "#FF6FD8",
+    "selection": "#FF6FD8",
+    "ansi": [
+      "#2A2148",
+      "#FF5C8A",
+      "#7CF0A8",
+      "#FFE27A",
+      "#6FB7FF",
+      "#FF6FD8",
+      "#3FE0D0",
+      "#D9CBE8",
+      "#7A6C9C",
+      "#FF9E64",
+      "#A8F7C6",
+      "#FFEFAE",
+      "#A3D2FF",
+      "#FFA3E8",
+      "#8AF0E4",
+      "#FFFFFF"
+    ]
+  }
+}

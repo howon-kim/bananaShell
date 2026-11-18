@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns",
+  "name": "Rainbows and Unicorns",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rainbows and Unicorns",
+    "background": "#0E0E13",
+    "foreground": "#E6E3D8",
+    "cursor": "#FCB827",
+    "selection": "#963D97",
+    "ansi": [
+      "#23232D",
+      "#E0453F",
+      "#62BB47",
+      "#FCB827",
+      "#1D9BE3",
+      "#BB62C0",
+      "#35C9BE",
+      "#C9C6BC",
+      "#6F6E7D",
+      "#F5821F",
+      "#8AD46B",
+      "#FFD35C",
+      "#5DB9F0",
+      "#D68ADB",
+      "#6FDDD3",
+      "#FFFDF5"
+    ]
+  }
+}

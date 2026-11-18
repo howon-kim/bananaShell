@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-cream",
+  "name": "Zacess Cream",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zacess Cream",
+    "background": "#FDF6E3",
+    "foreground": "#000000",
+    "cursor": "#000000",
+    "selection": "#7401CA",
+    "ansi": [
+      "#000000",
+      "#C1000A",
+      "#016F1B",
+      "#815601",
+      "#015AC2",
+      "#A901A6",
+      "#016969",
+      "#434343",
+      "#484848",
+      "#DF0010",
+      "#008120",
+      "#966501",
+      "#0069E3",
+      "#C500BF",
+      "#027B7B",
+      "#000000"
+    ]
+  }
+}

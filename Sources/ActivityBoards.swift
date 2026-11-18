@@ -66,6 +66,9 @@ struct ActivityBoard: Codable, Identifiable, Equatable {
     var pageBreaks: [Int]?
     var customTitle: String?
     var title: String { customTitle ?? "Group \(id)" }
+    /// The group's own terminal colors: an installed theme ID, `TerminalTheme.defaultScheme`,
+    /// or nil to follow the current theme.
+    var colorScheme: String?
     private var pages: [Range<Int>] {
         let ends = (pageBreaks ?? []).filter { $0 > 0 && $0 < slots.count }.sorted() + [slots.count]
         var result: [Range<Int>] = []
@@ -213,6 +216,11 @@ struct ActivityBoards: Codable, Equatable {
         let name = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let i = boards.firstIndex(where: { $0.id == id }) else { return }
         boards[i].customTitle = name
+    }
+
+    mutating func setColorScheme(_ id: Int, to scheme: String?) {
+        guard let i = boards.firstIndex(where: { $0.id == id }) else { return }
+        boards[i].colorScheme = scheme
     }
 
     mutating func reorder(_ slot: Int, to target: Int) {

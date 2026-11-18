@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-warm-light",
+  "name": "Zacess Warm Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zacess Warm Light",
+    "background": "#F4EAD5",
+    "foreground": "#342410",
+    "cursor": "#5B1301",
+    "selection": "#215779",
+    "ansi": [
+      "#342410",
+      "#8C1A16",
+      "#275200",
+      "#6A4603",
+      "#014B79",
+      "#742C60",
+      "#05514D",
+      "#574E44",
+      "#60574C",
+      "#A4332B",
+      "#386616",
+      "#845701",
+      "#115F93",
+      "#8A4074",
+      "#066662",
+      "#342410"
+    ]
+  }
+}

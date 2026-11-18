@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "x",
+  "name": "X",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/x",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "X",
+    "background": "#050505",
+    "foreground": "#F7F1FF",
+    "cursor": "#F7F1FF",
+    "selection": "#F7F1FF",
+    "ansi": [
+      "#0A0A0A",
+      "#FC618D",
+      "#7BD88F",
+      "#FCE566",
+      "#FD9353",
+      "#948AE3",
+      "#5AD4E6",
+      "#F7F1FF",
+      "#424242",
+      "#FC618D",
+      "#7BD88F",
+      "#FCE566",
+      "#FD9353",
+      "#948AE3",
+      "#5AD4E6",
+      "#F7F1FF"
+    ]
+  }
+}

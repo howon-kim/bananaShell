@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rebecca",
+  "name": "Rebecca",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/vic/rebecca-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Rebecca",
+    "background": "#292A44",
+    "foreground": "#E8E6ED",
+    "cursor": "#B89BF9",
+    "selection": "#663399",
+    "ansi": [
+      "#12131E",
+      "#DD7755",
+      "#04DBB5",
+      "#F2E7B7",
+      "#7AA5FF",
+      "#BF9CF9",
+      "#56D3C2",
+      "#E4E3E9",
+      "#666699",
+      "#FF92CD",
+      "#01EAC0",
+      "#FFFCA8",
+      "#69C0FA",
+      "#C17FF8",
+      "#8BFDE1",
+      "#F4F2F9"
+    ]
+  }
+}

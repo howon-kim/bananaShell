@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "miasma",
+  "name": "Miasma",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "CC0-1.0",
+  "source": "https://github.com/xero/miasma.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Miasma",
+    "background": "#222222",
+    "foreground": "#C2C2B0",
+    "cursor": "#C7C7C7",
+    "selection": "#E5C47B",
+    "ansi": [
+      "#000000",
+      "#685742",
+      "#5F875F",
+      "#B36D43",
+      "#78824B",
+      "#BB7744",
+      "#C9A554",
+      "#D7C483",
+      "#666666",
+      "#685742",
+      "#5F875F",
+      "#B36D43",
+      "#78824B",
+      "#BB7744",
+      "#C9A554",
+      "#D7C483"
+    ]
+  }
+}

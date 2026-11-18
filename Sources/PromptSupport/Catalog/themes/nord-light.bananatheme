@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "nord-light",
+  "name": "Nord Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/nordtheme/iterm2",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Nord Light",
+    "background": "#E5E9F0",
+    "foreground": "#414858",
+    "cursor": "#7BB3C3",
+    "selection": "#D8DEE9",
+    "ansi": [
+      "#3B4252",
+      "#BF616A",
+      "#96B17F",
+      "#C5A565",
+      "#81A1C1",
+      "#B48EAD",
+      "#7BB3C3",
+      "#A5ABB6",
+      "#4C566A",
+      "#BF616A",
+      "#96B17F",
+      "#C5A565",
+      "#81A1C1",
+      "#B48EAD",
+      "#82AFAE",
+      "#ECEFF4"
+    ]
+  }
+}

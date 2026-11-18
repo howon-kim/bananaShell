@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "xcode-light-hc",
+  "name": "Xcode Light hc",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "ISC",
+  "source": "https://github.com/lunacookies/vim-colors-xcode",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Xcode Light hc",
+    "background": "#FFFFFF",
+    "foreground": "#000000",
+    "cursor": "#000000",
+    "selection": "#B4D8FD",
+    "ansi": [
+      "#B4D8FD",
+      "#AD1805",
+      "#355D61",
+      "#78492A",
+      "#0058A1",
+      "#9C2191",
+      "#703DAA",
+      "#000000",
+      "#8A99A6",
+      "#AD1805",
+      "#174145",
+      "#78492A",
+      "#003F73",
+      "#9C2191",
+      "#441EA1",
+      "#000000"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "12-bit-rainbow",
+  "name": "12-bit Rainbow",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "CC0-1.0",
+  "source": "https://iamkate.com/data/12-bit-rainbow/",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "12-bit Rainbow",
+    "background": "#040404",
+    "foreground": "#FEFFFF",
+    "cursor": "#E0D000",
+    "selection": "#606060",
+    "ansi": [
+      "#000000",
+      "#A03050",
+      "#40D080",
+      "#E09040",
+      "#3060B0",
+      "#603090",
+      "#0090C0",
+      "#DBDED8",
+      "#685656",
+      "#C06060",
+      "#90D050",
+      "#E0D000",
+      "#00B0C0",
+      "#801070",
+      "#20B0C0",
+      "#FFFFFF"
+    ]
+  }
+}

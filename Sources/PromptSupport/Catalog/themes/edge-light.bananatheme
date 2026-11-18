@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "edge-light",
+  "name": "Edge Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sainnhe/edge",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Edge Light",
+    "background": "#FAFAFA",
+    "foreground": "#4B505B",
+    "cursor": "#3A8B84",
+    "selection": "#E3EAF6",
+    "ansi": [
+      "#FAFAFA",
+      "#D05858",
+      "#608E32",
+      "#BE7E05",
+      "#5079BE",
+      "#B05CCC",
+      "#3A8B84",
+      "#8790A0",
+      "#AFB8C2",
+      "#E17373",
+      "#76AF6F",
+      "#DEB974",
+      "#6996E0",
+      "#BF75D6",
+      "#5DBBC1",
+      "#7E869B"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-dusk-light",
+  "name": "Lumina Dusk Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Dusk Light",
+    "background": "#F6F3FE",
+    "foreground": "#2E2945",
+    "cursor": "#2E2945",
+    "selection": "#D7BCC6",
+    "ansi": [
+      "#2E2945",
+      "#872423",
+      "#357545",
+      "#9E611B",
+      "#3163AD",
+      "#874D82",
+      "#007185",
+      "#706B8B",
+      "#69637B",
+      "#622320",
+      "#216033",
+      "#854E07",
+      "#2B5088",
+      "#713A6C",
+      "#005B6C",
+      "#8E8AAC"
+    ]
+  }
+}

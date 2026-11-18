@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-olive-light",
+  "name": "Lumina Olive Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Olive Light",
+    "background": "#F7F6E5",
+    "foreground": "#302E16",
+    "cursor": "#302E16",
+    "selection": "#C6CDA8",
+    "ansi": [
+      "#302E16",
+      "#8A1F1F",
+      "#30624E",
+      "#A16010",
+      "#3264A3",
+      "#8E4C89",
+      "#006F83",
+      "#727056",
+      "#6A6B54",
+      "#64201E",
+      "#005139",
+      "#874E00",
+      "#1E508C",
+      "#763A72",
+      "#00596A",
+      "#918F74"
+    ]
+  }
+}

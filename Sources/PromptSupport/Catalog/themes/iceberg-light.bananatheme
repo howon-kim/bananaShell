@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "iceberg-light",
+  "name": "Iceberg Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/cocopon/iceberg.vim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Iceberg Light",
+    "background": "#E8E9EC",
+    "foreground": "#33374C",
+    "cursor": "#33374C",
+    "selection": "#33374C",
+    "ansi": [
+      "#DCDFE7",
+      "#CC517A",
+      "#668E3D",
+      "#C57339",
+      "#2D539E",
+      "#7759B4",
+      "#3F83A6",
+      "#33374C",
+      "#8389A3",
+      "#CC3768",
+      "#598030",
+      "#B6662D",
+      "#22478E",
+      "#6845AD",
+      "#327698",
+      "#262A3F"
+    ]
+  }
+}

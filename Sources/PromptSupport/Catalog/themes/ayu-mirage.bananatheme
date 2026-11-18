@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "ayu-mirage",
+  "name": "Ayu Mirage",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/ayu-theme/vscode-ayu",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Ayu Mirage",
+    "background": "#1F2430",
+    "foreground": "#CCCAC2",
+    "cursor": "#FFCC66",
+    "selection": "#409FFF",
+    "ansi": [
+      "#171B24",
+      "#ED8274",
+      "#87D96C",
+      "#FACC6E",
+      "#6DCBFA",
+      "#DABAFA",
+      "#90E1C6",
+      "#C7C7C7",
+      "#686868",
+      "#F28779",
+      "#D5FF80",
+      "#FFD173",
+      "#73D0FF",
+      "#DFBFFF",
+      "#95E6CB",
+      "#FFFFFF"
+    ]
+  }
+}

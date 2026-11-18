@@ -64,6 +64,18 @@ struct ActivityBoardChecks {
         precondition(state.tab(id: removedTab.id) == removedTab && state.tab(slot: removedTab.shortcutSlot) == removedTab)
         let terminals = Dictionary(uniqueKeysWithValues: ids.map { ($0, ProbeTerminal()) })
         state.activityBoards.reconcile(with: ids.map { $0 - 1 })
+        // A full-size shell can be opened or restored over any saved group grid.
+        for grid in ActivityGrid.allCases {
+            state.activityBoards.setGrid(grid, keeping: 16)
+            let saved = state.activityBoards
+            state.selected = .shell(17)
+            precondition(state.displayedGrid == .single)
+            state.selected = .activity
+            precondition(state.displayedGrid == grid && state.activityBoards == saved)
+        }
+        state.selected = .settings
+        precondition(state.displayedGrid == nil)
+        state.selected = .activity
         weak var focusWindow: NSWindow?
         let panel = ActivityPanel(state: state, terminalView: { terminals[$0] }, close: { _ in }, create: {},
                                   releaseFocus: { focusWindow?.makeFirstResponder(nil) }, expand: { state.selected = .shell($0) })

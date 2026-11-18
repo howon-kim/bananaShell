@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "rainbows-and-unicorns-paper-white",
+  "name": "Rainbows and Unicorns Paper White",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT OR Apache-2.0",
+  "source": "https://github.com/reactivepixels/sparklebios",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Rainbows and Unicorns Paper White",
+    "background": "#EFEDE6",
+    "foreground": "#1B1B1F",
+    "cursor": "#1B1B1F",
+    "selection": "#1B1B1F",
+    "ansi": [
+      "#1B1B1F",
+      "#C2272D",
+      "#2F7D1F",
+      "#8A6100",
+      "#0B6FA6",
+      "#8A2F8C",
+      "#0B7F78",
+      "#5E5D58",
+      "#8B8A84",
+      "#B04E00",
+      "#33851F",
+      "#946A00",
+      "#1279B5",
+      "#A8429F",
+      "#0B807A",
+      "#FFFFFF"
+    ]
+  }
+}

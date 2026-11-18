@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "black-metal-venom",
+  "name": "Black Metal (Venom)",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/metalelf0/base16-black-metal-scheme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Black Metal (Venom)",
+    "background": "#000000",
+    "foreground": "#C1C1C1",
+    "cursor": "#C1C1C1",
+    "selection": "#C1C1C1",
+    "ansi": [
+      "#000000",
+      "#5F8787",
+      "#F8F7F2",
+      "#79241F",
+      "#888888",
+      "#999999",
+      "#AAAAAA",
+      "#C1C1C1",
+      "#404040",
+      "#5F8787",
+      "#F8F7F2",
+      "#79241F",
+      "#888888",
+      "#999999",
+      "#AAAAAA",
+      "#C1C1C1"
+    ]
+  }
+}

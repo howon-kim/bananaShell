@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "gitlab-light",
+  "name": "GitLab Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/albertorestifo/gitlab-webide-theme",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "GitLab Light",
+    "background": "#FAFAFF",
+    "foreground": "#303030",
+    "cursor": "#303030",
+    "selection": "#AD95E9",
+    "ansi": [
+      "#303030",
+      "#A31700",
+      "#0A7F3D",
+      "#AF551D",
+      "#006CD8",
+      "#583CAC",
+      "#00798A",
+      "#303030",
+      "#303030",
+      "#A31700",
+      "#0A7F3D",
+      "#AF551D",
+      "#006CD8",
+      "#583CAC",
+      "#00798A",
+      "#303030"
+    ]
+  }
+}

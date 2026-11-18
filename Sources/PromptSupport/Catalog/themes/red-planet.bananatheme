@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "red-planet",
+  "name": "Red Planet",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/eliquious/Red-Planet-Theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Red Planet",
+    "background": "#222222",
+    "foreground": "#C2B790",
+    "cursor": "#C2B790",
+    "selection": "#1B324A",
+    "ansi": [
+      "#202020",
+      "#8C3432",
+      "#728271",
+      "#E8BF6A",
+      "#69819E",
+      "#896492",
+      "#5B8390",
+      "#B9AA99",
+      "#676767",
+      "#B55242",
+      "#869985",
+      "#EBEB91",
+      "#60827E",
+      "#DE4974",
+      "#38ADD8",
+      "#D6BFB8"
+    ]
+  }
+}

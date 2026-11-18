@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "everslate",
+  "name": "everslate",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/everslate",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "everslate",
+    "background": "#191F21",
+    "foreground": "#EDE6D5",
+    "cursor": "#EDE6D5",
+    "selection": "#2C5561",
+    "ansi": [
+      "#66717D",
+      "#CF7677",
+      "#6E9E8B",
+      "#B7875A",
+      "#4196C7",
+      "#9583B8",
+      "#6997A7",
+      "#EDE6D5",
+      "#819298",
+      "#FF918E",
+      "#8BBE95",
+      "#DBBC7F",
+      "#7FBBB3",
+      "#D699B6",
+      "#8BBACA",
+      "#F8F5E5"
+    ]
+  }
+}

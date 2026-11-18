@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "selenized-light",
+  "name": "Selenized Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jan-warchol/selenized",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Selenized Light",
+    "background": "#FBF3DB",
+    "foreground": "#53676D",
+    "cursor": "#53676D",
+    "selection": "#ECE3CC",
+    "ansi": [
+      "#ECE3CC",
+      "#D2212D",
+      "#489100",
+      "#AD8900",
+      "#0072D4",
+      "#CA4898",
+      "#009C8F",
+      "#53676D",
+      "#909995",
+      "#CC1729",
+      "#428B00",
+      "#A78300",
+      "#006DCE",
+      "#C44392",
+      "#00978A",
+      "#3A4D53"
+    ]
+  }
+}

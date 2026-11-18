@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "neobones-dark",
+  "name": "Neobones Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Neobones Dark",
+    "background": "#0F191F",
+    "foreground": "#C6D5CF",
+    "cursor": "#CEDDD7",
+    "selection": "#3A3E3D",
+    "ansi": [
+      "#0F191F",
+      "#DE6E7C",
+      "#90FF6B",
+      "#B77E64",
+      "#8190D4",
+      "#B279A7",
+      "#66A5AD",
+      "#C6D5CF",
+      "#334652",
+      "#E8838F",
+      "#A0FF85",
+      "#D68C67",
+      "#92A0E2",
+      "#CF86C1",
+      "#65B8C1",
+      "#98A39E"
+    ]
+  }
+}

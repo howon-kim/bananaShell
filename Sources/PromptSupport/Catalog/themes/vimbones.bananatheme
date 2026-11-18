@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "vimbones",
+  "name": "Vimbones",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zenbones-theme/zenbones.nvim",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Vimbones",
+    "background": "#F0F0CA",
+    "foreground": "#353535",
+    "cursor": "#353535",
+    "selection": "#D7D7D7",
+    "ansi": [
+      "#F0F0CA",
+      "#A8334C",
+      "#4F6C31",
+      "#944927",
+      "#286486",
+      "#88507D",
+      "#3B8992",
+      "#353535",
+      "#ACAC89",
+      "#94253E",
+      "#3F5A22",
+      "#803D1C",
+      "#1D5573",
+      "#7B3B70",
+      "#2B747C",
+      "#5C5C5C"
+    ]
+  }
+}

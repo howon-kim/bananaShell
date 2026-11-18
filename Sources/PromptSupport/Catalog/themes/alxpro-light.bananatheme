@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "alxpro-light",
+  "name": "AlxPro Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/al-xpro/alxpro-theme",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "AlxPro Light",
+    "background": "#FFFFFF",
+    "foreground": "#171717",
+    "cursor": "#000000",
+    "selection": "#D9E8F9",
+    "ansi": [
+      "#171717",
+      "#CB2A2E",
+      "#287A3A",
+      "#A35200",
+      "#0068D6",
+      "#781FBB",
+      "#08796E",
+      "#A1A1A1",
+      "#666666",
+      "#E1292F",
+      "#358443",
+      "#B45E00",
+      "#1072E2",
+      "#9D4DDB",
+      "#0C8378",
+      "#D4D4D4"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "sonokai",
+  "name": "Sonokai",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/sainnhe/sonokai",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Sonokai",
+    "background": "#2C2E34",
+    "foreground": "#E2E2E3",
+    "cursor": "#E2E2E3",
+    "selection": "#414550",
+    "ansi": [
+      "#181819",
+      "#FC5D7C",
+      "#9ED072",
+      "#E7C664",
+      "#76CCE0",
+      "#B39DF3",
+      "#F39660",
+      "#E2E2E3",
+      "#7F8490",
+      "#FC5D7C",
+      "#9ED072",
+      "#E7C664",
+      "#76CCE0",
+      "#B39DF3",
+      "#F39660",
+      "#E2E2E3"
+    ]
+  }
+}

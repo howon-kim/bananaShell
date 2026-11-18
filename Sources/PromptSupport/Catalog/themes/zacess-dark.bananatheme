@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-dark",
+  "name": "Zacess Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Zacess Dark",
+    "background": "#121212",
+    "foreground": "#F5F5F5",
+    "cursor": "#FFD400",
+    "selection": "#4FBDFF",
+    "ansi": [
+      "#A3A3A3",
+      "#FFA79B",
+      "#1BDB41",
+      "#F0B40B",
+      "#90C1FF",
+      "#F7A0F1",
+      "#37D2CF",
+      "#E6E6E6",
+      "#C8C8C8",
+      "#FFD5CE",
+      "#34FF57",
+      "#FFDA8A",
+      "#C9E0FF",
+      "#FFD0FA",
+      "#23F6F8",
+      "#FFFFFF"
+    ]
+  }
+}

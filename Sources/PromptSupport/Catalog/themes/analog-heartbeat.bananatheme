@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "analog-heartbeat",
+  "name": "Analog Heartbeat",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/analog-heartbeat",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Analog Heartbeat",
+    "background": "#211F1C",
+    "foreground": "#E6DDCB",
+    "cursor": "#F2B35D",
+    "selection": "#454034",
+    "ansi": [
+      "#302C27",
+      "#C96F64",
+      "#94B26A",
+      "#D9AC63",
+      "#839EB2",
+      "#B28DA1",
+      "#7EAFA5",
+      "#D6CBB8",
+      "#62594D",
+      "#E57B73",
+      "#B7D36B",
+      "#F2C87B",
+      "#A8C4D6",
+      "#D0A9BD",
+      "#A1D4C5",
+      "#FFF0D6"
+    ]
+  }
+}

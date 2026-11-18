@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "vaughn",
+  "name": "Vaughn",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/vaughn",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Vaughn",
+    "background": "#25234F",
+    "foreground": "#DCDCCC",
+    "cursor": "#FF5555",
+    "selection": "#B5D5FF",
+    "ansi": [
+      "#25234F",
+      "#705050",
+      "#60B48A",
+      "#DFAF8F",
+      "#5555FF",
+      "#F08CC3",
+      "#8CD0D3",
+      "#709080",
+      "#709080",
+      "#DCA3A3",
+      "#60B48A",
+      "#F0DFAF",
+      "#5555FF",
+      "#EC93D3",
+      "#93E0E3",
+      "#FFFFFF"
+    ]
+  }
+}

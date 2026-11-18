@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-yellow-on-black",
+  "name": "Zacess Yellow on Black",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Zacess Yellow on Black",
+    "background": "#000000",
+    "foreground": "#FFEB3B",
+    "cursor": "#FFEB3B",
+    "selection": "#09BCC4",
+    "ansi": [
+      "#A3A3A3",
+      "#FFA79B",
+      "#01DC3F",
+      "#EDB618",
+      "#90C1FF",
+      "#FD9CF8",
+      "#1FD3D3",
+      "#D9D9D9",
+      "#C8C8C8",
+      "#FFD5CE",
+      "#3CFF5D",
+      "#FFDA8A",
+      "#C9E0FF",
+      "#FFD0FA",
+      "#00F7F5",
+      "#FFFFFF"
+    ]
+  }
+}

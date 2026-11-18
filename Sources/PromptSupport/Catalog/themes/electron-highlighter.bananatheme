@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "electron-highlighter",
+  "name": "Electron Highlighter",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/electron-highlighter/ghostty",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Electron Highlighter",
+    "background": "#23283D",
+    "foreground": "#A5B6D4",
+    "cursor": "#A5B6D4",
+    "selection": "#293257",
+    "ansi": [
+      "#15161F",
+      "#FF6C8D",
+      "#00FFC3",
+      "#FFEBB1",
+      "#77ABFF",
+      "#DAA4F4",
+      "#00E5FF",
+      "#7187B7",
+      "#4B5B8C",
+      "#FF6C8D",
+      "#00FFC3",
+      "#FFEBB1",
+      "#77ABFF",
+      "#DAA4F4",
+      "#00E5FF",
+      "#C3CDE2"
+    ]
+  }
+}

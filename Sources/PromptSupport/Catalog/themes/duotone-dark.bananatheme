@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "duotone-dark",
+  "name": "Duotone Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/simurai/duotone-dark-syntax",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Duotone Dark",
+    "background": "#1F1D27",
+    "foreground": "#B7A1FF",
+    "cursor": "#FF9839",
+    "selection": "#353147",
+    "ansi": [
+      "#1F1D27",
+      "#D9393E",
+      "#2DCD73",
+      "#D9B76E",
+      "#FFC284",
+      "#DE8D40",
+      "#2488FF",
+      "#B7A1FF",
+      "#4E4A60",
+      "#D9393E",
+      "#2DCD73",
+      "#D9B76E",
+      "#FFC284",
+      "#DE8D40",
+      "#2488FF",
+      "#EAE5FF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "neon-raincheck",
+  "name": "Neon Raincheck",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/neon-raincheck",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Neon Raincheck",
+    "background": "#101522",
+    "foreground": "#DCE6F5",
+    "cursor": "#51D9E8",
+    "selection": "#293452",
+    "ansi": [
+      "#1C2435",
+      "#E36B8D",
+      "#70C6AD",
+      "#E2C179",
+      "#789DE8",
+      "#B58DEB",
+      "#51B9CD",
+      "#C8D4E6",
+      "#4C5871",
+      "#FF86A5",
+      "#91E9C9",
+      "#F6D894",
+      "#9CB8FF",
+      "#D2A9FF",
+      "#77E7F3",
+      "#F5F8FF"
+    ]
+  }
+}

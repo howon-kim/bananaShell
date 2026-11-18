@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "barbenheimer-nuclear-sunrise",
+  "name": "Barbenheimer Nuclear Sunrise",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/jayvicsanantonio/barbenheimer-zed-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Barbenheimer Nuclear Sunrise",
+    "background": "#0F0F0A",
+    "foreground": "#FFFFFF",
+    "cursor": "#FF69B4",
+    "selection": "#FFFFFF",
+    "ansi": [
+      "#0F0F0A",
+      "#FF69B4",
+      "#80C0A0",
+      "#C0C080",
+      "#80A0C0",
+      "#C080C0",
+      "#80C0C0",
+      "#D0D0D0",
+      "#EEEEEE",
+      "#FF69B4",
+      "#80C0A0",
+      "#C0C080",
+      "#80A0C0",
+      "#C080C0",
+      "#80C0C0",
+      "#E0E0E0"
+    ]
+  }
+}

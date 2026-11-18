@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-lagoon-dark",
+  "name": "Lumina Lagoon Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Lagoon Dark",
+    "background": "#042930",
+    "foreground": "#D7E6E7",
+    "cursor": "#D7E6E7",
+    "selection": "#0E535A",
+    "ansi": [
+      "#042E36",
+      "#D3726A",
+      "#9FD4A9",
+      "#E7CF94",
+      "#8EC3F9",
+      "#E5B0DF",
+      "#5AD3D6",
+      "#B7C5C6",
+      "#7D9BA2",
+      "#E0938C",
+      "#B8EFC2",
+      "#FFE6A7",
+      "#BADCFF",
+      "#FFCAF9",
+      "#9FE6E8",
+      "#D7E6E7"
+    ]
+  }
+}

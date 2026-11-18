@@ -1,5 +1,3 @@
-import BananaZstd
-import CryptoKit
 import AppKit
 import SwiftUI
 
@@ -9,15 +7,16 @@ private enum Palette: String, CaseIterable {
     var color: Color { switch self { case .violet: return Color(red: 0.53, green: 0.37, blue: 1); case .mint: return .mint; case .ocean: return .cyan } }
 }
 
-private enum ThemeLibrary: String, CaseIterable {
+enum ThemeLibrary: String, CaseIterable {
     case builtin = "Built-in", posh = "Oh My Posh", starship = "Starship"
     var engine: String { self == .posh ? "oh-my-posh" : "starship" }
     var dependency: PromptEngine? { self == .builtin ? nil : self == .posh ? .posh : .starship }
     var files: [URL] {
         switch self {
         case .builtin: return []
-        case .posh: return Self.poshFiles
-        case .starship: return Self.starshipFiles
+        // Prompts installed from themes follow the bundled ones.
+        case .posh: return Self.poshFiles + UserPromptFiles.files(rawValue)
+        case .starship: return Self.starshipFiles + UserPromptFiles.files(rawValue)
         }
     }
     // Bundled themes cannot change while the app is running. Each library is
@@ -43,7 +42,7 @@ private struct RGB {
     var color: Color { Color(.sRGB, red: Double(value >> 16) / 255, green: Double(value >> 8 & 255) / 255, blue: Double(value & 255) / 255) }
 }
 
-private enum PromptDesign: String, CaseIterable {
+enum PromptDesign: String, CaseIterable {
     case classic = "Classic", minimal = "Minimal", stacked = "Stacked", ribbon = "Ribbon"
 
     func prompt(color: String, identity: Bool) -> String {
@@ -121,6 +120,44 @@ enum PromptSetup {
         return background(file: file, follow: prefs.object(forKey: "followThemeBackground") as? Bool ?? true, accent: NSColor(accent))
     }
 
+    /// Identifies the prompt choice, so a theme's interface accent applies only
+    /// while the prompt is still the one the theme set.
+    static func promptSignature() -> String {
+        let prefs = UserDefaults.standard
+        let library = prefs.string(forKey: "themeLibrary") ?? ThemeLibrary.builtin.rawValue
+        let detail = library == ThemeLibrary.builtin.rawValue
+            ? (prefs.string(forKey: "promptDesign") ?? "") + (prefs.string(forKey: "customAccent") ?? "")
+            : prefs.string(forKey: "themeFile." + library) ?? ""
+        return [String(prefs.bool(forKey: "powerline")), library, detail].joined(separator: "|")
+    }
+
+    /// ANSI preview of a built-in layout with the current accent and identity settings.
+    static func builtInSample(_ layout: PromptDesign, compact: Bool = false) -> String {
+        let prefs = UserDefaults.standard
+        let palette = prefs.string(forKey: "promptPalette") ?? ""
+        let customAccent = prefs.string(forKey: "customAccent") ?? ""
+        let identity = prefs.object(forKey: "promptIdentity") as? Bool ?? true
+        let reset = "\u{1b}[0m"
+        let name = compact ? "mac" : "user@mac"
+        let path = compact ? "~" : "~/work"
+        let code = (Palette(rawValue: palette) ?? .violet).code
+        let color = RGB(customAccent)
+        let fg = color.map { "38;2;\($0.value >> 16);\($0.value >> 8 & 255);\($0.value & 255)" } ?? "38;5;\(code)"
+        let bg = color.map { "48;2;\($0.value >> 16);\($0.value >> 8 & 255);\($0.value & 255)" } ?? "48;5;\(layout == .ribbon && code == 99 ? 57 : code)"
+        let foreground = "\u{1b}[\(fg)m"
+        let background = "\u{1b}[\(bg)m"
+        let user = identity ? "\u{1b}[37m\(name) " : ""
+        switch layout {
+        case .minimal: return (identity ? "\u{1b}[37m\(name) · " : "") + foreground + path + " ❯ " + reset
+        case .stacked: return foreground + "╭─ " + user + foreground + path + "\r\n╰─❯ " + reset
+        case .classic, .ribbon:
+            let tip = layout == .ribbon ? "\u{E0B0}" : "▶"
+            let prefix = identity ? "\u{1b}[40;97m \(name) " + background + "\u{1b}[30m" + tip : background
+            let end = layout == .ribbon && color == nil && code == 99 ? "\u{1b}[38;5;57m" : foreground
+            return prefix + "\u{1b}[30m \(path) " + reset + end + tip + reset + " "
+        }
+    }
+
     static func liveConfiguration() -> String {
         let prefs = UserDefaults.standard
         guard prefs.bool(forKey: "powerline") else { return "off\n" }
@@ -142,320 +179,308 @@ enum PromptSetup {
 struct PromptSettings: View {
     let didChange: () -> Void
     let engineTools: PromptEngineTools
+    @AppStorage(PersistentTerminal.interactionKey) private var tmuxInteraction = true
     @AppStorage("restoreLastWindow") private var restoreLastWindow = true
     @AppStorage(AlertDestination.storageKey) private var alertDestination = AlertDestination.notch
-    @AppStorage("powerline") private var enabled = false
-    @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
-    @AppStorage("promptIdentity") private var identity = true
-    @AppStorage("promptDesign") private var design = PromptDesign.classic
-    @AppStorage("themeLibrary") private var appliedLibrary = ThemeLibrary.builtin
-    @AppStorage("customAccent") private var customAccent = ""
-    @AppStorage("themeFile.Oh My Posh") private var poshFile = ""
-    @AppStorage("themeFile.Starship") private var starshipFile = ""
-    @AppStorage("followThemeBackground") private var followBackground = true
-    @AppStorage("followThemeAccent") private var followThemeAccent = true
-    @State private var search = ""
-    @State private var hexDraft = ""
-    @State private var library = ThemeLibrary.builtin
-    @State private var pendingInstallation: ThemeChoice?
+    @State private var query = ""
+    @State private var selection = Section.general
+    @State private var showingDetail = false
 
-    private struct ThemeChoice: Identifiable {
-        let id = UUID()
-        let library: ThemeLibrary
-        let file: URL?
-        var title: String { file.map { library.title($0) } ?? library.rawValue }
-    }
-
-    init(engineTools: PromptEngineTools = PromptEngineTools(), didChange: @escaping () -> Void) {
+    init(engineTools: PromptEngineTools = PromptEngineTools(), initialSection: String? = nil, didChange: @escaping () -> Void) {
         self.engineTools = engineTools; self.didChange = didChange
+        if let section = initialSection.flatMap(Section.init(rawValue:)) { _selection = State(initialValue: section) }
     }
 
-    private let accent = Color.accentColor
-    private var tint: Color { RGB(customAccent)?.color ?? (Palette(rawValue: palette) ?? .violet).color }
-    private var files: [URL] { library.files }
-    private var selectedFile: URL? {
-        let name = library == .posh ? poshFile : starshipFile
-        return files.first { $0.lastPathComponent == name } ?? files.first
+    private enum Section: String, CaseIterable, Identifiable {
+        case general = "General", alerts = "Alerts", terminal = "Terminal", shortcuts = "Keyboard shortcuts"
+        var id: Self { self }
+        var icon: String {
+            switch self {
+            case .general: return "macwindow"
+            case .alerts: return "bell.badge"
+            case .terminal: return "terminal"
+            case .shortcuts: return "keyboard"
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .general: return "Windows · Startup"
+            case .alerts: return "Notch · Banners"
+            case .terminal: return "tmux · Extensions"
+            case .shortcuts: return "Groups · Pages · Terminals"
+            }
+        }
+        /// Words that find the section in search.
+        var keywords: String {
+            switch self {
+            case .general: return "window restore size position startup launch"
+            case .alerts: return "notification notch claude completion automation question banner"
+            case .terminal: return "tmux mouse scrollback oh my posh starship engine zsh autosuggestions pay-respects plugin extensions marketplace"
+            case .shortcuts: return "keyboard shortcut key create select group page terminal notch"
+            }
+        }
     }
-    private var previewName: String {
-        guard enabled else { return "Default shell" }
-        return selectedFile.map { library.title($0) } ?? design.rawValue
+
+    private var matches: [Section] {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return Section.allCases }
+        return Section.allCases.filter {
+            $0.rawValue.localizedCaseInsensitiveContains(text) || $0.keywords.localizedCaseInsensitiveContains(text)
+                || $0.subtitle.localizedCaseInsensitiveContains(text)
+        }
     }
-    private var previewSample: String {
-        guard enabled else { return "user@mac ~/work % " }
-        guard library != .builtin else { return builtInSample(design) }
-        return selectedFile.flatMap { ThemeSampleView.samples[$0.lastPathComponent] } ?? "No preview available"
-    }
-    private var previewBackground: NSColor {
-        PromptSetup.background(file: selectedFile, follow: enabled && followBackground, accent: NSColor(tint))
-    }
+    private var current: Section? { matches.contains(selection) ? selection : matches.first }
 
     var body: some View {
-        GeometryReader { geometry in
-            if geometry.size.width >= 1100 && enabled {
-                let inspectorWidth = min(520, max(380, (geometry.size.width - 64) * 0.34))
-                VStack(alignment: .leading, spacing: 24) {
-                    header
-                    HStack(alignment: .top, spacing: 24) {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 24) {
-                                preview
-                                libraryPicker
-                                preferences
-                                startup
-                                notifications
-                                ShellPluginSettings()
-                                ShortcutSettings()
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }.frame(width: inspectorWidth)
-                        ScrollView {
-                            if library == .builtin {
-                                layoutPicker(columns: 2)
-                            } else {
-                                themeGallery
+        GeometryReader { geo in
+            let narrow = geo.size.width < 690
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Settings")
+                        .font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .title1).pointSize, relativeTo: .title))
+                        .bold().kerning(-0.6)
+                    Text("Preferences · Terminal · Shortcuts")
+                        .font(TabTypography.suite(size: NSFont.preferredFont(forTextStyle: .caption1).pointSize + 1, relativeTo: .caption))
+                        .foregroundStyle(.secondary)
+                }
+                HStack(alignment: .top, spacing: 16) {
+                    if !narrow || !showingDetail {
+                        VStack(alignment: .leading, spacing: 14) {
+                            TextField("Search settings", text: $query)
+                                .textFieldStyle(.roundedBorder)
+                                .accessibilityLabel("Search settings")
+                            ScrollView {
+                                VStack(spacing: 4) {
+                                    ForEach(matches) { section in sidebarRow(section) }
+                                    if matches.isEmpty { Text("No matching settings").foregroundStyle(.secondary) }
+                                }
                             }
-                        }.frame(maxWidth: .infinity, alignment: .topLeading)
+                        }.frame(maxWidth: narrow ? .infinity : 260)
                     }
-                }.padding(20)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        header
-                        startup
-                        notifications
-                        ShellPluginSettings()
-                        ShortcutSettings()
-                        preview
-                        if enabled {
-                            libraryPicker
-                            if library == .builtin {
-                                layoutPicker(columns: geometry.size.width >= 760 ? 4 : 2)
-                                preferences
-                            } else {
-                                preferences
-                                themeGallery
+                    if !narrow { Divider() }
+                    if !narrow || showingDetail {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 16) {
+                                if narrow { Button("‹  All Settings") { showingDetail = false } }
+                                if let section = current { detail(section) }
                             }
-                        } else {
-                            HStack(spacing: 8) {
-                                Image(systemName: "terminal")
-                                Text("Enable Custom prompt to choose a layout or explore themes.")
-                            }.font(.callout).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(4)
+                            .padding(.trailing, 20)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
                 }
-            }
-        }
-        .onAppear { hexDraft = customAccent; library = appliedLibrary }
-        .onChange(of: library) { _ in search = "" }
-        .onChange(of: [String(enabled), palette, String(identity), design.rawValue,
-                       customAccent, String(followBackground)]) { _ in didChange() }
-        .sheet(item: $pendingInstallation) { choice in
-            if let engine = choice.library.dependency {
-                PromptEngineInstallView(engine: engine, theme: choice.title, tools: engineTools) { binary in
-                    apply(choice, binary: binary)
-                    pendingInstallation = nil
-                }
-            }
-        }
-    }
-
-    private func choose(_ choice: ThemeChoice) {
-        guard let engine = choice.library.dependency else { apply(choice); return }
-        let savedPath = UserDefaults.standard.string(forKey: "enginePath." + choice.library.rawValue)
-        if let binary = engineTools.executable(engine.rawValue, preferred: savedPath) { apply(choice, binary: binary) }
-        else { pendingInstallation = choice }
-    }
-
-    private func choice(for library: ThemeLibrary) -> ThemeChoice {
-        let name = library == .posh ? poshFile : starshipFile
-        return ThemeChoice(library: library, file: library.files.first { $0.lastPathComponent == name } ?? library.files.first)
-    }
-
-    private func apply(_ choice: ThemeChoice, binary: URL? = nil) {
-        if let binary { UserDefaults.standard.set(binary.path, forKey: "enginePath." + choice.library.rawValue) }
-        if let file = choice.file {
-            if choice.library == .posh { poshFile = file.lastPathComponent }
-            else if choice.library == .starship { starshipFile = file.lastPathComponent }
-        }
-        appliedLibrary = choice.library
-        library = choice.library
-        enabled = true
-        didChange()
-    }
-
-    private var startup: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Startup")
-            preferenceRow("Restore window size and position",
-                          detail: "Terminals and running processes always reconnect when you reopen the app.",
-                          value: $restoreLastWindow)
-                .settingsSurface(accent: accent)
+            }.padding([.leading, .vertical], 20)
+             .padding(.trailing, narrow && !showingDetail ? 20 : 0)
         }
         .onChange(of: restoreLastWindow) { enabled in
             if !enabled { UserDefaults.standard.removeObject(forKey: "lastWindowSnapshot") }
         }
     }
 
-    private var notifications: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Show alerts in")
-            HStack(spacing: 8) {
-                ForEach(AlertDestination.allCases) { item in
-                    Button { alertDestination = item } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: item == .notch ? "laptopcomputer" : "bell.badge")
-                                Spacer(minLength: 0)
-                                if alertDestination == item { Image(systemName: "checkmark.circle.fill") }
-                            }.font(.system(size: 13)).foregroundStyle(alertDestination == item ? accent : .secondary)
-                            Text(item.title).font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1).minimumScaleFactor(0.8)
-                            Text(item == .notch ? "Cards at the top of the screen" : "macOS banners and alerts")
-                                .font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
-                        }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
-                         .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
-                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile))
-                     .settingsSurface(selected: alertDestination == item, accent: accent)
-                     .accessibilityAddTraits(alertDestination == item ? .isSelected : [])
+    private func mark(_ section: Section, size: CGFloat) -> some View {
+        Image(systemName: section.icon)
+            .font(.system(size: size * 0.42, weight: .medium)).foregroundStyle(Color.accentColor)
+            .frame(width: size, height: size)
+            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+            .accessibilityHidden(true)
+    }
+
+    private func sidebarRow(_ section: Section) -> some View {
+        LibraryRow(selected: current == section, select: { selection = section; showingDetail = true }) {
+            HStack {
+                mark(section, size: 34)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(section.rawValue).lineLimit(1)
+                    Text(section.subtitle).font(.caption2.monospaced()).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+        } action: { EmptyView() }
+    }
+
+    @ViewBuilder private func detail(_ section: Section) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            mark(section, size: 56)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(section.rawValue).font(.title2.bold())
+                Text(section.subtitle).font(.caption.monospaced()).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        Divider()
+        switch section {
+        case .general:
+            SettingsLabel("Windows")
+            SettingsBox {
+                SettingsRow(title: "Restore window size and position",
+                            detail: "Terminals and their processes reconnect either way.") {
+                    Toggle("Restore window size and position", isOn: $restoreLastWindow)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
             }
-            Text("Claude completions and automation questions appear in one place only.")
+        case .alerts:
+            SettingsLabel("Show alerts in")
+            alertChoices
+            Text("Claude completions and automation questions appear in one place.")
                 .font(.caption).foregroundStyle(.secondary)
+        case .terminal:
+            SettingsBox {
+                SettingsRow(title: "tmux", detail: "Select, scroll back and copy with tmux. Turn off to use the native terminal.") {
+                    Toggle("Enabled", isOn: $tmuxInteraction).toggleStyle(.switch).labelsHidden().controlSize(.small)
+                        .accessibilityLabel("Enable tmux mouse and scrollback")
+                }
+                .onChange(of: tmuxInteraction) { _ in
+                    // Rewrites tmux.conf and reloads it into the running server.
+                    _ = try? PersistentTerminal()
+                }
+            }
+            Button("Open Extension Marketplace…") {
+                NSApp.sendAction(#selector(AppDelegate.showExtensionMarketplace(_:)), to: nil, from: nil)
+            }
+        case .shortcuts:
+            ShortcutSettings()
         }
     }
 
-    private var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Settings").font(.title.bold())
-                Text("Startup, notifications, shortcuts, appearance & shell prompt").font(.callout).foregroundStyle(.secondary)
+    private var alertChoices: some View {
+        HStack(spacing: 10) {
+            ForEach(AlertDestination.allCases) { item in
+                let selected = alertDestination == item
+                Button { alertDestination = item } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: item == .notch ? "laptopcomputer" : "bell.badge")
+                            .font(.system(size: 18)).frame(width: 26)
+                            .foregroundStyle(selected ? Color.accentColor : .secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                            Text(item == .notch ? "Cards at the top of the screen" : "macOS banners and alerts")
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.85)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.5))
+                    }
+                    .padding(12)
+                    .modifier(LibraryRowSurface(selected: selected))
+                    .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tile, style: .continuous)
+                        .strokeBorder(selected ? Color.accentColor.opacity(0.5) : .white.opacity(0.08)))
+                    .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// A small heading above a group of settings, as in Keys and Automations details.
+struct SettingsLabel: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View { Text(text).font(.callout.weight(.semibold)).foregroundStyle(.secondary) }
+}
+
+/// Rows of settings on one rounded surface.
+struct SettingsBox<Content: View>: View {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.07)))
+    }
+}
+
+/// One line in a settings box: title and detail on the left, a control on the right.
+struct SettingsRow<Accessory: View>: View {
+    let title: String
+    var detail: String?
+    let accessory: Accessory
+
+    init(title: String, detail: String? = nil, @ViewBuilder accessory: () -> Accessory) {
+        self.title = title; self.detail = detail; self.accessory = accessory()
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.callout)
+                if let detail { Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
-            Toggle("Custom prompt", isOn: Binding(get: { enabled }, set: { value in
-                if value { choose(choice(for: appliedLibrary)) }
-                else { enabled = false }
-            }))
-                .font(.callout).toggleStyle(.switch).controlSize(.small).fixedSize()
-        }
+            accessory
+        }.padding(.horizontal, 16).padding(.vertical, 12)
     }
+}
 
-    private var preview: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "terminal").foregroundStyle(.secondary)
-                Text(previewName).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                if enabled {
-                    Text(library.rawValue).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                Circle().fill(accent).frame(width: 5, height: 5)
-                Text("Preview").font(.caption).foregroundStyle(.secondary)
-            }.padding(.horizontal, 16).padding(.vertical, 11)
-             .background(Color.white.opacity(0.035))
-            Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
-            let sample = ThemeSampleView(sample: previewSample, background: previewBackground)
-            let height = CGFloat(max(4, previewSample.components(separatedBy: "\n").count + 1)) * 18
-            GeometryReader { geometry in
-                ScrollView(.horizontal) {
-                    sample.frame(width: max(geometry.size.width, sample.fittingWidth), height: height)
-                        .allowsHitTesting(false)
-                }
-            }.frame(height: height)
-                .padding(18)
-                .background(Color(nsColor: previewBackground))
-                .accessibilityLabel("Prompt preview: " + previewName)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: SurfaceRadius.panel))
-        .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.panel).strokeBorder(.white.opacity(0.1)))
-    }
+/// Prompt switch and personalization, shown from the Theme Marketplace.
+struct PromptOptionsView: View {
+    /// Applies prompt changes to open terminals.
+    let changed: () -> Void
+    /// Turns the custom prompt on, installing its engine first if needed.
+    let turnOn: () -> Void
+    @AppStorage("powerline") private var enabled = false
+    @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
+    @AppStorage("promptIdentity") private var identity = true
+    @AppStorage("themeLibrary") private var library = ThemeLibrary.builtin
+    @AppStorage("customAccent") private var customAccent = ""
+    @AppStorage("followThemeBackground") private var followBackground = true
+    @AppStorage("followThemeAccent") private var followThemeAccent = true
+    @AppStorage(ThemeKey.scheme) private var scheme = ""
+    @ObservedObject private var store = ThemeStore.shared
+    @State private var hexDraft = ""
 
-    private var libraryPicker: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Theme library")
-            HStack(spacing: 8) {
-                ForEach(ThemeLibrary.allCases, id: \.self) { item in
-                    Button { library = item; choose(choice(for: item)) } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Image(systemName: item == .builtin ? "slider.horizontal.3" : item == .posh ? "sparkles" : "star")
-                                Spacer(minLength: 0)
-                                if library == item { Image(systemName: "checkmark.circle.fill") }
-                            }.font(.system(size: 13)).foregroundStyle(library == item ? accent : .secondary)
-                            Text(item.rawValue).font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1).minimumScaleFactor(0.8)
-                            Text(item == .builtin ? "4 layouts" : "\(item.files.count) themes")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
-                         .contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
-                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile))
-                     .settingsSurface(selected: library == item, accent: accent)
-                     .accessibilityAddTraits(library == item ? .isSelected : [])
-                }
+    private var tint: Color { RGB(customAccent)?.color ?? (Palette(rawValue: palette) ?? .violet).color }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Prompt options").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 4)
+            SettingsRow(title: "Custom prompt", detail: "Off uses your shell's own prompt.") {
+                Toggle("Custom prompt", isOn: Binding(get: { enabled }, set: { $0 ? turnOn() : (enabled = false) }))
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small)
             }
-        }
-    }
-
-    private func layoutPicker(columns: Int) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Prompt layout")
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: columns), spacing: 10) {
-                ForEach(PromptDesign.allCases, id: \.self) { item in
-                    Button { design = item } label: {
-                        VStack(alignment: .leading, spacing: 0) {
-                            ThemeSampleView(sample: builtInSample(item, compact: columns > 2), background: shellSurface, fontSize: 11)
-                                .frame(height: 44).padding(12).background(Color(nsColor: shellSurface))
-                                .allowsHitTesting(false).accessibilityHidden(true)
-                            HStack {
-                                Text(item.rawValue).font(.system(size: 12, weight: .medium))
-                                Spacer()
-                                if item == design { Image(systemName: "checkmark.circle.fill").foregroundStyle(accent) }
-                            }.padding(.horizontal, 12).padding(.vertical, 10)
-                        }.contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
-                    }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: item == design, accent: accent)
-                     .accessibilityAddTraits(item == design ? .isSelected : [])
-                }
-            }
-        }
-    }
-
-    private var preferences: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle(library == .builtin ? "Personalize" : "Appearance")
-            VStack(spacing: 0) {
+            if enabled {
                 if library == .builtin {
-                    accentRow
-                    Divider().padding(.horizontal, 16)
-                    preferenceRow("Show identity", detail: "User and computer name", value: $identity)
-                    Divider().padding(.horizontal, 16)
+                    Divider().padding(.leading, 16)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Accent color").font(.callout)
+                        colorControls
+                    }.padding(.horizontal, 16).padding(.vertical, 12)
+                    Divider().padding(.leading, 16)
+                    SettingsRow(title: "Show identity", detail: "User and computer name in the prompt.") { toggle($identity) }
                 }
-                preferenceRow("Match interface accent", detail: "Use the applied prompt theme’s color for tabs, buttons, and selections.", value: $followThemeAccent)
-                Divider().padding(.horizontal, 16)
-                preferenceRow("Theme background", detail: "Match the terminal to your prompt", value: $followBackground)
-            }.settingsSurface(accent: accent)
+                Divider().padding(.leading, 16)
+                SettingsRow(title: "Match interface accent", detail: "Tabs, buttons and selections use the prompt's color.") { toggle($followThemeAccent) }
+                Divider().padding(.leading, 16)
+                SettingsRow(title: "Prompt background", detail: "Terminals without a color scheme use the prompt's background.") {
+                    Toggle("", isOn: Binding(get: { followBackground }, set: { if $0 { store.releaseScheme() }; followBackground = $0 }))
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                }
+                // Read so the row follows scheme changes made elsewhere.
+                if !scheme.isEmpty, let name = store.currentSchemeName {
+                    Divider().padding(.leading, 16)
+                    SettingsRow(title: "Terminal colors", detail: "\(name) colors the terminals, not the prompt.") {
+                        Button("Use Prompt Colors") { store.releaseScheme() }.controlSize(.small)
+                    }
+                }
+            }
         }
+        .padding(.bottom, 6)
+        .frame(width: 400)
+        .onAppear { hexDraft = customAccent }
+        .onChange(of: [String(enabled), palette, String(identity), customAccent, String(followBackground), scheme]) { _ in changed() }
     }
 
-    private var accentRow: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) {
-                Text("Accent color").font(.callout)
-                Spacer(minLength: 16)
-                colorControls
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Accent color").font(.callout)
-                colorControls
-            }
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+    private func toggle(_ value: Binding<Bool>) -> some View {
+        Toggle("", isOn: value).labelsHidden().toggleStyle(.switch).controlSize(.small)
     }
 
     private var colorControls: some View {
         HStack(spacing: 10) {
             ForEach(Palette.allCases, id: \.rawValue) { item in
                 let selected = customAccent.isEmpty && palette == item.rawValue
-                Button { palette = item.rawValue; customAccent = ""; hexDraft = "" } label: {
+                Button { store.releaseScheme(); palette = item.rawValue; customAccent = ""; hexDraft = "" } label: {
                     Circle().fill(item.color).frame(width: 22, height: 22)
                         .overlay { if selected { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.black) } }
                         .padding(3).overlay(Circle().strokeBorder(selected ? item.color.opacity(0.65) : .clear))
@@ -466,6 +491,7 @@ struct PromptSettings: View {
             Divider().frame(height: 18)
             ColorPicker("Custom accent", selection: Binding(get: { tint }, set: { next in
                 guard let c = NSColor(next).usingColorSpace(.sRGB) else { return }
+                store.releaseScheme()
                 customAccent = String(format: "#%02X%02X%02X", Int((c.redComponent * 255).rounded()),
                                       Int((c.greenComponent * 255).rounded()), Int((c.blueComponent * 255).rounded()))
                 hexDraft = customAccent
@@ -473,111 +499,9 @@ struct PromptSettings: View {
             TextField("#RRGGBB", text: $hexDraft)
                 .font(.system(size: 12, design: .monospaced)).textFieldStyle(.roundedBorder).frame(width: 88)
                 .accessibilityLabel("Accent hex color")
-                .onChange(of: hexDraft) { if let rgb = RGB($0) { customAccent = rgb.hex } }
+                // Only a typed color differs from the stored one; syncing from customAccent does not.
+                .onChange(of: hexDraft) { if let rgb = RGB($0), rgb.hex != customAccent { store.releaseScheme(); customAccent = rgb.hex } }
                 .onChange(of: customAccent) { if hexDraft != $0 { hexDraft = $0 } }
-        }
-    }
-
-    private func preferenceRow(_ title: String, detail: String, value: Binding<Bool>) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.callout)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 12)
-            Toggle(title, isOn: value).labelsHidden().toggleStyle(.switch).controlSize(.small)
-        }.padding(.horizontal, 16).padding(.vertical, 13)
-    }
-
-    private var themeGallery: some View {
-        let matches = files.filter { search.isEmpty || library.title($0).localizedCaseInsensitiveContains(search) }
-        let selected = selectedFile
-        return VStack(alignment: .leading, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    sectionTitle("Themes")
-                    Spacer()
-                    themeSearch.frame(width: 220)
-                }
-                VStack(alignment: .leading, spacing: 10) {
-                    sectionTitle("Themes")
-                    themeSearch
-                }
-            }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 12)], spacing: 12) {
-                ForEach(matches, id: \.self) { file in themeCard(file, selected: selected == file) }
-            }
-            if matches.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").font(.title2)
-                    Text("No matching themes").font(.callout)
-                    Button("Clear search") { search = "" }.buttonStyle(.borderless)
-                }.foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(32)
-            }
-        }
-    }
-
-    private var themeSearch: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search themes", text: $search).textFieldStyle(.plain)
-            if !search.isEmpty {
-                Button { search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                    .buttonStyle(HoverButtonStyle()).accessibilityLabel("Clear search")
-            }
-        }.font(.callout).padding(8)
-         .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: SurfaceRadius.tab))
-         .overlay(RoundedRectangle(cornerRadius: SurfaceRadius.tab).strokeBorder(.white.opacity(0.08)))
-    }
-
-    private func themeCard(_ file: URL, selected: Bool) -> some View {
-        let background = PromptSetup.background(file: file, follow: followBackground, accent: NSColor(tint))
-        return Button {
-            choose(ThemeChoice(library: library, file: file))
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Group {
-                    if let sample = ThemeSampleView.samples[file.lastPathComponent] {
-                        ThemeSampleView(sample: sample, background: background, fontSize: 11)
-                            .allowsHitTesting(false).accessibilityHidden(true)
-                    } else {
-                        Text("No preview available").font(.caption).foregroundStyle(.secondary)
-                    }
-                }.frame(height: 76).padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                 .background(Color(nsColor: background)).clipped()
-                HStack {
-                    Text(library.title(file)).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                    Spacer(minLength: 4)
-                    if selected { Image(systemName: "checkmark.circle.fill").foregroundStyle(accent) }
-                }.padding(12)
-            }.contentShape(RoundedRectangle(cornerRadius: SurfaceRadius.tile))
-        }.buttonStyle(HoverButtonStyle(cornerRadius: SurfaceRadius.tile)).settingsSurface(selected: selected, accent: accent)
-         .accessibilityLabel(library.title(file)).accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title).settingsSectionTitle()
-    }
-
-    private func builtInSample(_ layout: PromptDesign, compact: Bool = false) -> String {
-        let reset = "\u{1b}[0m"
-        let name = compact ? "mac" : "user@mac"
-        let path = compact ? "~" : "~/work"
-        let code = (Palette(rawValue: palette) ?? .violet).code
-        let color = RGB(customAccent)
-        let fg = color.map { "38;2;\($0.value >> 16);\($0.value >> 8 & 255);\($0.value & 255)" } ?? "38;5;\(code)"
-        let bg = color.map { "48;2;\($0.value >> 16);\($0.value >> 8 & 255);\($0.value & 255)" } ?? "48;5;\(layout == .ribbon && code == 99 ? 57 : code)"
-        let foreground = "\u{1b}[\(fg)m"
-        let background = "\u{1b}[\(bg)m"
-        let user = identity ? "\u{1b}[37m\(name) " : ""
-        switch layout {
-        case .minimal: return (identity ? "\u{1b}[37m\(name) · " : "") + foreground + path + " ❯ " + reset
-        case .stacked: return foreground + "╭─ " + user + foreground + path + "\r\n╰─❯ " + reset
-        case .classic, .ribbon:
-            let tip = layout == .ribbon ? "\u{E0B0}" : "▶"
-            let prefix = identity ? "\u{1b}[40;97m \(name) " + background + "\u{1b}[30m" + tip : background
-            let end = layout == .ribbon && color == nil && code == 99 ? "\u{1b}[38;5;57m" : foreground
-            return prefix + "\u{1b}[30m \(path) " + reset + end + tip + reset + " "
         }
     }
 }
@@ -592,9 +516,17 @@ struct ThemedRoot<Content: View>: View {
     @AppStorage("themeFile.Starship") private var starshipFile = ""
     @AppStorage("promptPalette") private var palette = Palette.violet.rawValue
     @AppStorage("customAccent") private var custom = ""
+    @AppStorage("promptDesign") private var design = ""
+    @AppStorage(ThemeKey.accent) private var themeAccent = ""
+    @AppStorage(ThemeKey.accentSignature) private var themeSignature = ""
 
     private var color: Color {
         guard enabled && follow else { return InterfaceAccent.mint }
+        // Reads the same settings observed above, so the accent updates with them.
+        _ = (design, poshFile, starshipFile, custom)
+        if !themeAccent.isEmpty, themeSignature == PromptSetup.promptSignature(), let hex = HexColor(themeAccent) {
+            return hex.color
+        }
         if library == .builtin {
             return RGB(custom)?.color ?? (Palette(rawValue: palette) ?? .violet).color
         }
@@ -631,7 +563,7 @@ extension View {
 }
 
 /// Static ANSI previews keep theme galleries lightweight and never start a shell.
-private struct ThemeSampleView: NSViewRepresentable {
+struct ThemeSampleView: NSViewRepresentable {
     let sample: String
     let background: NSColor
     var fontSize: CGFloat = 13
@@ -683,16 +615,29 @@ private struct ThemeSampleView: NSViewRepresentable {
         paragraph.lineSpacing = 2
         func append(_ range: NSRange) {
             guard range.length > 0 else { return }
-            var font = terminalFont(size: fontSize)
-            if bold { font = NSFontManager.shared.convert(font, toHaveTrait: .boldFontMask) }
-            if italic { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
+            let base = terminalFont(size: fontSize)
+            var font = base
             let ink = inverse ? fill : foreground
-            result.append(NSAttributedString(string: raw.substring(with: range), attributes: [
-                .font: font, .foregroundColor: dim ? ink.withAlphaComponent(0.6) : ink,
-                .backgroundColor: inverse ? foreground : fill,
-                .underlineStyle: underline ? NSUnderlineStyle.single.rawValue : 0,
-                .paragraphStyle: paragraph
-            ]))
+            var attributes: [NSAttributedString.Key: Any] = [:]
+            // The bundled Nerd Font has only a regular face. Converting to bold or
+            // italic would switch to another family without the prompt icons, so
+            // draw a synthetic bold or slant on the same font instead.
+            if bold {
+                let converted = NSFontManager.shared.convert(font, toHaveTrait: .boldFontMask)
+                if converted.familyName == base.familyName && converted.fontName != base.fontName { font = converted }
+                else { attributes[.strokeWidth] = -2.5; attributes[.strokeColor] = dim ? ink.withAlphaComponent(0.6) : ink }
+            }
+            if italic {
+                let converted = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask)
+                if converted.familyName == base.familyName && converted.fontName != font.fontName { font = converted }
+                else { attributes[.obliqueness] = 0.18 }
+            }
+            attributes[.font] = font
+            attributes[.foregroundColor] = dim ? ink.withAlphaComponent(0.6) : ink
+            attributes[.backgroundColor] = inverse ? foreground : fill
+            attributes[.underlineStyle] = underline ? NSUnderlineStyle.single.rawValue : 0
+            attributes[.paragraphStyle] = paragraph
+            result.append(NSAttributedString(string: raw.substring(with: range), attributes: attributes))
         }
         var offset = 0
         for match in sgr.matches(in: text, range: NSRange(location: 0, length: raw.length)) {
@@ -808,19 +753,19 @@ private struct ShortcutSettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Keyboard shortcuts").settingsSectionTitle()
+                SettingsLabel("Shortcuts")
                 Spacer()
-                Button("Restore defaults") { stop(); creation.reset(); navigation.reset(); notch.reset() }
+                Button("Restore Defaults") { stop(); creation.reset(); navigation.reset(); notch.reset() }
                     .controlSize(.small)
                     .disabled(navigation.isDefault && creation.isDefault && notch.isDefault)
             }
-            VStack(spacing: 0) {
+            SettingsBox {
                 HStack {
                     Spacer()
                     Text("Create").frame(width: keyWidth)
                     Text("Select").frame(width: keyWidth)
                 }
-                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.vertical, 8)
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 8)
                 ForEach(ShortcutScope.allCases, id: \.self) { scope in
                     Divider()
                     HStack {
@@ -832,26 +777,26 @@ private struct ShortcutSettings: View {
                         keycap(navigation.modifier(scope).symbol + " 1–0", Target(scope: scope, column: .select))
                             .help("Select by position in the current " + (scope == .group ? "window." : scope == .page ? "group." : "page.") + " Numbers follow the tab order.")
                     }
-                    .padding(.horizontal, 12).padding(.vertical, 7)
+                    .padding(.horizontal, 16).padding(.vertical, 7)
                 }
                 Divider()
                 HStack {
                     Image(systemName: "rectangle.topthird.inset.filled").foregroundStyle(Color.accentColor).frame(width: 20)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Notch terminal").font(.callout)
-                        Text("Works from any app").font(.caption).foregroundStyle(.secondary)
+                        Text("Works from any app.").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 4)
                     keycap(notch.current.display, Target(scope: .terminal, column: .notch), width: keyWidth * 2 + 8)
                         .help("Show or hide the notch terminal from any app.")
                 }
-                .padding(.horizontal, 12).padding(.vertical, 7)
+                .padding(.horizontal, 16).padding(.vertical, 7)
                 Divider()
                 Text(message ?? (recording == nil ? "Click a keycap, then press your shortcut." : recording?.column == .notch
                     ? "Press a key with ⌘, ⌥ or ⌃ (⇧ optional). Esc cancels."
                     : "Press ⌘, ⌥ or ⌃ with " + (recording?.column == .create ? "a letter." : "a number. Shared modifiers swap rows.") + " Esc cancels."))
-                    .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(12)
-            }.settingsSurface()
+                    .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 12)
+            }
         }
         .onDisappear { stop() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in stop() }
@@ -919,155 +864,6 @@ private struct ShortcutSettings: View {
             }
             stop()
             return nil
-        }
-    }
-}
-
-private enum ShellPlugin: String, CaseIterable, Identifiable {
-    case suggestions = "zsh-autosuggestions", corrections = "pay-respects"
-    var id: String { rawValue }
-    var detail: String {
-        self == .suggestions ? "Suggest commands from history as you type. Press → to accept."
-            : "Type f after a failed command to review suggested fixes."
-    }
-    var folder: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("bananaShell/Plugins").appendingPathComponent(rawValue)
-    }
-    var entry: URL { folder.appendingPathComponent(self == .suggestions ? rawValue + ".zsh" : rawValue) }
-    var installed: Bool {
-        self == .suggestions ? FileManager.default.isReadableFile(atPath: entry.path)
-            : FileManager.default.isExecutableFile(atPath: entry.path)
-    }
-
-    func install() throws {
-        let fm = FileManager.default
-        let parent = folder.deletingLastPathComponent()
-        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
-        let staging = parent.appendingPathComponent(UUID().uuidString)
-        defer { try? fm.removeItem(at: staging) }
-        switch self {
-        case .suggestions:
-            try run("/usr/bin/git", ["clone", "--quiet", "--depth", "1", "--branch", "v0.7.1",
-                                     "https://github.com/zsh-users/zsh-autosuggestions.git", staging.path])
-        case .corrections:
-            #if arch(arm64)
-            let arch = "aarch64", digest = "ba11712db3dac2d4548abf4747186751636962271fdcda44d078463dde47e158"
-            #else
-            let arch = "x86_64", digest = "0754726c1b504cfd471eaf3d0aad8ba763201902f0394ad774f65633712f95ac"
-            #endif
-            let archive = parent.appendingPathComponent(UUID().uuidString + ".tar.zst")
-            defer { try? fm.removeItem(at: archive) }
-            let asset = "pay-respects-0.9.0-" + arch + "-apple-darwin.tar.zst"
-            try run("/usr/bin/curl", ["--disable", "--fail", "--silent", "--show-error", "--location",
-                                      "--proto", "=https", "--max-time", "120", "-o", archive.path,
-                                      "https://github.com/iffse/pay-respects/releases/download/v0.9.0/" + asset])
-            let compressed = try Data(contentsOf: archive)
-            let checksum = SHA256.hash(data: compressed).map { String(format: "%02x", $0) }.joined()
-            guard checksum == digest else { throw CocoaError(.fileReadCorruptFile) }
-            try fm.createDirectory(at: staging, withIntermediateDirectories: false)
-            // Finder-launched apps cannot rely on tar finding an external zstd.
-            // The pinned releases expand to less than 32 MiB on both architectures.
-            var tar = Data(count: 32 * 1024 * 1024)
-            let size = tar.withUnsafeMutableBytes { destination in
-                compressed.withUnsafeBytes { source in
-                    ZSTD_decompress(destination.baseAddress, destination.count, source.baseAddress, source.count)
-                }
-            }
-            guard ZSTD_isError(size) == 0 else { throw CocoaError(.fileReadCorruptFile) }
-            tar.count = size
-            let plainArchive = archive.deletingPathExtension()
-            defer { try? fm.removeItem(at: plainArchive) }
-            try tar.write(to: plainArchive)
-            try run("/usr/bin/tar", ["-xf", plainArchive.path, "-C", staging.path, "pay-respects", "LICENSE"])
-            try run(staging.appendingPathComponent("pay-respects").path, ["--version"])
-        }
-        guard fm.isReadableFile(atPath: staging.appendingPathComponent(entry.lastPathComponent).path)
-        else { throw CocoaError(.fileReadNoSuchFile) }
-        try fm.moveItem(at: staging, to: folder)
-    }
-
-    private func run(_ executable: String, _ arguments: [String]) throws {
-        let process = Process(), log = Pipe()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
-        process.standardOutput = FileHandle.nullDevice
-        process.standardInput = FileHandle.nullDevice
-        process.standardError = log
-        process.environment = ProcessInfo.processInfo.environment.merging(["GIT_TERMINAL_PROMPT": "0"]) { _, new in new }
-        try process.run()
-        let output = log.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let message = String(decoding: output.suffix(1600), as: UTF8.self)
-            throw NSError(domain: "ShellPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: message.isEmpty ? "Download failed. Check your connection and try again." : message])
-        }
-    }
-}
-
-enum ShellPluginStartup {
-    static var environment: [String] {
-        ShellPlugin.allCases.compactMap { plugin in
-            guard UserDefaults.standard.bool(forKey: "plugin." + plugin.id), plugin.installed else { return nil }
-            let key = plugin == .suggestions ? "BANANA_AUTOSUGGESTIONS" : "BANANA_PAY_RESPECTS"
-            return key + "=" + plugin.entry.path
-        }
-    }
-}
-
-@MainActor
-private final class PluginCatalog: ObservableObject {
-    static let shared = PluginCatalog()
-    @Published var installing: String?
-    @Published var failure: String?
-    func install(_ plugin: ShellPlugin) {
-        guard installing == nil else { return }
-        installing = plugin.id
-        failure = nil
-        Task {
-            defer { installing = nil }
-            do {
-                try await Task.detached { try plugin.install() }.value
-                UserDefaults.standard.set(true, forKey: "plugin." + plugin.id)
-            } catch { failure = plugin.id + ": " + error.localizedDescription }
-        }
-    }
-}
-
-private struct ShellPluginSettings: View {
-    @ObservedObject private var catalog = PluginCatalog.shared
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Terminal plugins").font(.headline)
-            ForEach(ShellPlugin.allCases) { plugin in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(plugin.id).font(.callout.bold())
-                        Text(plugin.detail).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if plugin.installed {
-                        PluginSwitch(plugin: plugin)
-                    } else {
-                        Button(catalog.installing == plugin.id ? "Installing…" : "Install") { catalog.install(plugin) }
-                            .disabled(catalog.installing != nil)
-                    }
-                }.padding(10).settingsSurface()
-            }
-            if let failure = catalog.failure { Text(failure).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
-        }
-    }
-
-    private struct PluginSwitch: View {
-        let plugin: ShellPlugin
-        @AppStorage var enabled: Bool
-        init(plugin: ShellPlugin) {
-            self.plugin = plugin
-            _enabled = AppStorage(wrappedValue: false, "plugin." + plugin.id)
-        }
-        var body: some View {
-            Toggle("Enabled", isOn: $enabled).toggleStyle(.switch).labelsHidden()
-                .accessibilityLabel("Enable " + plugin.id)
         }
     }
 }

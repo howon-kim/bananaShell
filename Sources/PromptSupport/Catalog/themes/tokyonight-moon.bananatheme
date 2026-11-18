@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tokyonight-moon",
+  "name": "TokyoNight Moon",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "Apache-2.0",
+  "source": "https://github.com/folke/tokyonight.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "TokyoNight Moon",
+    "background": "#222436",
+    "foreground": "#C8D3F5",
+    "cursor": "#C8D3F5",
+    "selection": "#2D3F76",
+    "ansi": [
+      "#1B1D2B",
+      "#FF757F",
+      "#C3E88D",
+      "#FFC777",
+      "#82AAFF",
+      "#C099FF",
+      "#86E1FC",
+      "#828BB8",
+      "#444A73",
+      "#FF757F",
+      "#C3E88D",
+      "#FFC777",
+      "#82AAFF",
+      "#C099FF",
+      "#86E1FC",
+      "#C8D3F5"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "paper-crane-midnight-ink",
+  "name": "Paper Crane: Midnight Ink",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/paper-crane-midnight-ink",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Paper Crane: Midnight Ink",
+    "background": "#20272A",
+    "foreground": "#E6E2D6",
+    "cursor": "#D9826B",
+    "selection": "#3C4B49",
+    "ansi": [
+      "#303A3C",
+      "#B9685C",
+      "#7D9E85",
+      "#C1A06B",
+      "#819CBD",
+      "#AA88A7",
+      "#79A9A5",
+      "#D4D3C9",
+      "#607073",
+      "#DC8977",
+      "#A2C2A4",
+      "#DFC08B",
+      "#A5BBDB",
+      "#C7A9C4",
+      "#A1D0C8",
+      "#FFF8E8"
+    ]
+  }
+}

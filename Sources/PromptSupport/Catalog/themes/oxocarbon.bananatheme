@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "oxocarbon",
+  "name": "Oxocarbon",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/nyoom-engineering/oxocarbon.nvim",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Oxocarbon",
+    "background": "#161616",
+    "foreground": "#F2F4F8",
+    "cursor": "#FFFFFF",
+    "selection": "#393939",
+    "ansi": [
+      "#161616",
+      "#00DFDB",
+      "#00B4FF",
+      "#FF4297",
+      "#00C15A",
+      "#C693FF",
+      "#FF74B8",
+      "#F2F4F8",
+      "#585858",
+      "#00DFDB",
+      "#00B4FF",
+      "#FF4297",
+      "#00C15A",
+      "#C693FF",
+      "#FF74B8",
+      "#F2F4F8"
+    ]
+  }
+}

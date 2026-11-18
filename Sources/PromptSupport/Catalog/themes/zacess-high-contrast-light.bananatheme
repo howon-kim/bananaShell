@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-high-contrast-light",
+  "name": "Zacess High Contrast Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Zacess High Contrast Light",
+    "background": "#FFFFFF",
+    "foreground": "#000000",
+    "cursor": "#000000",
+    "selection": "#015F5E",
+    "ansi": [
+      "#000000",
+      "#CA0000",
+      "#017424",
+      "#875B00",
+      "#005BDC",
+      "#B400AC",
+      "#006F6E",
+      "#3D3D3D",
+      "#333333",
+      "#E90100",
+      "#018726",
+      "#9C6A01",
+      "#016EEE",
+      "#CF00C6",
+      "#028181",
+      "#000000"
+    ]
+  }
+}

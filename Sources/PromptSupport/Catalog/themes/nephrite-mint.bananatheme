@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "nephrite-mint",
+  "name": "Nephrite Mint",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/Nephrite-theme/terminal",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Nephrite Mint",
+    "background": "#EDFBF3",
+    "foreground": "#192E23",
+    "cursor": "#048149",
+    "selection": "#BDD5C7",
+    "ansi": [
+      "#CBE1D4",
+      "#AD4B4B",
+      "#048149",
+      "#866C02",
+      "#2672B7",
+      "#8058AB",
+      "#017B80",
+      "#3F5247",
+      "#607268",
+      "#AD4B4B",
+      "#037E65",
+      "#866C02",
+      "#2672B7",
+      "#A54A77",
+      "#017B80",
+      "#192E23"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "andromeda",
+  "name": "Andromeda",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/EliverLara/Andromeda",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Andromeda",
+    "background": "#262A33",
+    "foreground": "#E5E5E5",
+    "cursor": "#F8F8F0",
+    "selection": "#5A5C62",
+    "ansi": [
+      "#000000",
+      "#CD3131",
+      "#05BC79",
+      "#E5E512",
+      "#2472C8",
+      "#BC3FBC",
+      "#0FA8CD",
+      "#E5E5E5",
+      "#666666",
+      "#CD3131",
+      "#05BC79",
+      "#E5E512",
+      "#2472C8",
+      "#BC3FBC",
+      "#0FA8CD",
+      "#E5E5E5"
+    ]
+  }
+}

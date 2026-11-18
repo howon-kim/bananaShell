@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-nebula-dark",
+  "name": "Lumina Nebula Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Nebula Dark",
+    "background": "#161826",
+    "foreground": "#DDE1EC",
+    "cursor": "#DDE1EC",
+    "selection": "#393856",
+    "ansi": [
+      "#1A1C2C",
+      "#D57068",
+      "#8FDCBA",
+      "#F3C085",
+      "#C6D6E8",
+      "#E5AEDF",
+      "#88D2DA",
+      "#BDC1CB",
+      "#838BA5",
+      "#E2928A",
+      "#B0F5D5",
+      "#FFDFBA",
+      "#D8EAFF",
+      "#FFC8F9",
+      "#A1ECF5",
+      "#DDE1EC"
+    ]
+  }
+}

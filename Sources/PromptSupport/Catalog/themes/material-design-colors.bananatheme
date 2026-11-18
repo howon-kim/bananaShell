@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "material-design-colors",
+  "name": "Material Design Colors",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/MartinSeeler/iterm2-material-design",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Material Design Colors",
+    "background": "#1D262A",
+    "foreground": "#E7EBED",
+    "cursor": "#EAEAEA",
+    "selection": "#4E6A78",
+    "ansi": [
+      "#435B67",
+      "#FC3841",
+      "#5CF19E",
+      "#FED032",
+      "#37B6FF",
+      "#FC226E",
+      "#59FFD1",
+      "#FFFFFF",
+      "#A1B0B8",
+      "#FC746D",
+      "#ADF7BE",
+      "#FEE16C",
+      "#70CFFF",
+      "#FC669B",
+      "#9AFFE6",
+      "#FFFFFF"
+    ]
+  }
+}

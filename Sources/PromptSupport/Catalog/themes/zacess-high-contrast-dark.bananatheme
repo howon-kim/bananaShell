@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "zacess-high-contrast-dark",
+  "name": "Zacess High Contrast Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/zacesshq/themes/blob/main/LICENSE",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Zacess High Contrast Dark",
+    "background": "#000000",
+    "foreground": "#FFFFFF",
+    "cursor": "#F5C400",
+    "selection": "#BF96FF",
+    "ansi": [
+      "#B3B3B3",
+      "#FF9E94",
+      "#26F444",
+      "#F5C400",
+      "#8FD0FF",
+      "#F2A6FF",
+      "#00F4E0",
+      "#E0E0E0",
+      "#CCCCCC",
+      "#FFC4BD",
+      "#95FF98",
+      "#FFE08A",
+      "#C8E6FF",
+      "#FFCDF7",
+      "#56FFF3",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "paper-crane",
+  "name": "Paper Crane",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/paper-crane",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Paper Crane",
+    "background": "#F5F1E8",
+    "foreground": "#353B3A",
+    "cursor": "#B85D4B",
+    "selection": "#B8CDB6",
+    "ansi": [
+      "#424845",
+      "#A74E45",
+      "#53765E",
+      "#8A6C2B",
+      "#4C688F",
+      "#805B83",
+      "#3E7B7A",
+      "#626C66",
+      "#777D76",
+      "#BF6354",
+      "#668A6D",
+      "#A3833D",
+      "#607EAA",
+      "#966F9B",
+      "#529392",
+      "#454F49"
+    ]
+  }
+}

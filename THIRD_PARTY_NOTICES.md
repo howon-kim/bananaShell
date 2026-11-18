@@ -12,6 +12,7 @@ The following bundled components keep their own licenses, included next to the f
 | [SUITE](https://github.com/sun-typeface/SUITE) | `Sources/Fonts` | SIL OFL 1.1 | `Sources/Fonts/SUITE-LICENSE.txt` |
 | [Oh My Posh themes](https://github.com/JanDeDobbeleer/oh-my-posh) | `Sources/PromptSupport/Oh My Posh` | MIT | `Sources/PromptSupport/Oh My Posh/COPYING` |
 | [Starship presets](https://starship.rs/presets/) | `Sources/PromptSupport/Starship` | ISC | `Sources/PromptSupport/Starship/LICENSE` |
+| [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) (permissively licensed schemes only) | `Sources/PromptSupport/Catalog/themes` | MIT collection; each scheme's own licence is in its file | `Sources/PromptSupport/Catalog/LICENSE.txt` |
 | Program logos | `Sources/ProgramLogos` | see below | — |
 
 ## Program logos

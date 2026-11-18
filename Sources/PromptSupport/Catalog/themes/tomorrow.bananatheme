@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "tomorrow",
+  "name": "Tomorrow",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/chriskempson/tomorrow-theme",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Tomorrow",
+    "background": "#FFFFFF",
+    "foreground": "#4D4D4C",
+    "cursor": "#4D4D4C",
+    "selection": "#D6D6D6",
+    "ansi": [
+      "#000000",
+      "#C82829",
+      "#718C00",
+      "#EAB700",
+      "#4271AE",
+      "#8959A8",
+      "#3E999F",
+      "#BFBFBF",
+      "#000000",
+      "#C82829",
+      "#718C00",
+      "#EAB700",
+      "#4271AE",
+      "#8959A8",
+      "#3E999F",
+      "#FFFFFF"
+    ]
+  }
+}

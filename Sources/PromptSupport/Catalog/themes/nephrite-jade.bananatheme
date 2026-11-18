@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "nephrite-jade",
+  "name": "Nephrite Jade",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/Nephrite-theme/terminal",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Nephrite Jade",
+    "background": "#132E20",
+    "foreground": "#E7F2EB",
+    "cursor": "#4DBF74",
+    "selection": "#3C5346",
+    "ansi": [
+      "#2E4639",
+      "#FFAAA7",
+      "#4DBF74",
+      "#E0C262",
+      "#96C9FE",
+      "#D5B2FF",
+      "#4CDBE3",
+      "#BDCCC3",
+      "#7F9187",
+      "#FFAAA7",
+      "#65DDBB",
+      "#E0C262",
+      "#96C9FE",
+      "#FEA4CC",
+      "#4CDBE3",
+      "#E7F2EB"
+    ]
+  }
+}

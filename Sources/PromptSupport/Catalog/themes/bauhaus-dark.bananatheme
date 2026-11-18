@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "bauhaus-dark",
+  "name": "Bauhaus Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/dmnsgn/vscode-bauhaus-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Bauhaus Dark",
+    "background": "#2B2119",
+    "foreground": "#F2F2F2",
+    "cursor": "#F60529",
+    "selection": "#2E354A",
+    "ansi": [
+      "#574D43",
+      "#FF3E42",
+      "#79932D",
+      "#B18201",
+      "#6689CF",
+      "#C661CF",
+      "#099997",
+      "#9A9A9A",
+      "#9A9A9A",
+      "#FF8D84",
+      "#9CB855",
+      "#DEA301",
+      "#88ADF6",
+      "#ED86F6",
+      "#38BFBC",
+      "#F2F2F2"
+    ]
+  }
+}

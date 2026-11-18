@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "flexoki-dark",
+  "name": "Flexoki Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/kepano/flexoki",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Flexoki Dark",
+    "background": "#100F0F",
+    "foreground": "#CECDC3",
+    "cursor": "#CECDC3",
+    "selection": "#403E3C",
+    "ansi": [
+      "#100F0F",
+      "#D14D41",
+      "#879A39",
+      "#D0A215",
+      "#4385BE",
+      "#CE5D97",
+      "#3AA99F",
+      "#878580",
+      "#575653",
+      "#AF3029",
+      "#66800B",
+      "#AD8301",
+      "#205EA6",
+      "#A02F6F",
+      "#24837B",
+      "#CECDC3"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "starlight",
+  "name": "Starlight",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "Unlicense",
+  "source": "https://github.com/CosmicToast/starlight",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Starlight",
+    "background": "#242424",
+    "foreground": "#FFFFFF",
+    "cursor": "#FFFFFF",
+    "selection": "#FFFFFF",
+    "ansi": [
+      "#242424",
+      "#F62B5A",
+      "#47B413",
+      "#E3C401",
+      "#24ACD4",
+      "#F2AFFD",
+      "#13C299",
+      "#E6E6E6",
+      "#616161",
+      "#FF4D51",
+      "#35D450",
+      "#E9E836",
+      "#5DC5F8",
+      "#FEABF2",
+      "#24DFC4",
+      "#FFFFFF"
+    ]
+  }
+}

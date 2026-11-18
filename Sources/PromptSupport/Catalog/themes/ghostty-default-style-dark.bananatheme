@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "ghostty-default-style-dark",
+  "name": "Ghostty Default Style Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/ghostty-org/ghostty",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Ghostty Default Style Dark",
+    "background": "#282C34",
+    "foreground": "#FFFFFF",
+    "cursor": "#FFFFFF",
+    "selection": "#FFFFFF",
+    "ansi": [
+      "#1D1F21",
+      "#CC6566",
+      "#B6BD68",
+      "#F0C674",
+      "#82A2BE",
+      "#B294BB",
+      "#8ABEB7",
+      "#C4C8C6",
+      "#666666",
+      "#D54E53",
+      "#B9CA4B",
+      "#E7C547",
+      "#7AA6DA",
+      "#C397D8",
+      "#70C0B1",
+      "#EAEAEA"
+    ]
+  }
+}

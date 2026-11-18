@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-polaire-dark",
+  "name": "Lumina Polaire Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Polaire Dark",
+    "background": "#0F1A21",
+    "foreground": "#D7E1E8",
+    "cursor": "#D7E1E8",
+    "selection": "#2C4551",
+    "ansi": [
+      "#121F27",
+      "#CD776F",
+      "#A9D6B1",
+      "#E2C682",
+      "#AECCF2",
+      "#E6B8E1",
+      "#8CD9F4",
+      "#B7C1C7",
+      "#8395A2",
+      "#DC978F",
+      "#C2F1CA",
+      "#FDE099",
+      "#D1E5FF",
+      "#FFD3FA",
+      "#C2EFFF",
+      "#D7E1E8"
+    ]
+  }
+}

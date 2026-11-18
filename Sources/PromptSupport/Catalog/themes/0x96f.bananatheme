@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "0x96f",
+  "name": "0x96f",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/filipjanevski/0x96f-term-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "0x96f",
+    "background": "#262427",
+    "foreground": "#FCFCFA",
+    "cursor": "#FCFCFA",
+    "selection": "#FCFCFA",
+    "ansi": [
+      "#262427",
+      "#FF666D",
+      "#B3E03A",
+      "#FFC739",
+      "#00CDE8",
+      "#A392E8",
+      "#9DEAF6",
+      "#FCFCFA",
+      "#545452",
+      "#FF7E83",
+      "#BEE55E",
+      "#FFD05E",
+      "#1BD5EB",
+      "#B0A3EB",
+      "#ACEDF8",
+      "#FCFCFA"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "whimsy",
+  "name": "Whimsy",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/rod/iterm2-whimsy/tree/master",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Whimsy",
+    "background": "#29283B",
+    "foreground": "#B3B0D6",
+    "cursor": "#B3B0D6",
+    "selection": "#3D3C58",
+    "ansi": [
+      "#535178",
+      "#EF6487",
+      "#5ECA89",
+      "#FDD877",
+      "#65AEF7",
+      "#AA7FF0",
+      "#43C1BE",
+      "#FFFFFF",
+      "#535178",
+      "#EF6487",
+      "#5ECA89",
+      "#FDD877",
+      "#65AEF7",
+      "#AA7FF0",
+      "#43C1BE",
+      "#FFFFFF"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-rayleigh-light",
+  "name": "Lumina Rayleigh Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Lumina Rayleigh Light",
+    "background": "#EDF8FF",
+    "foreground": "#1D2F47",
+    "cursor": "#1D2F47",
+    "selection": "#B5D0E9",
+    "ansi": [
+      "#1D2F47",
+      "#94171B",
+      "#1E773B",
+      "#A35F00",
+      "#0160A7",
+      "#8D4487",
+      "#056271",
+      "#5D718D",
+      "#576C81",
+      "#6C1F1D",
+      "#01622A",
+      "#874E00",
+      "#004C87",
+      "#763171",
+      "#004D59",
+      "#7B90AD"
+    ]
+  }
+}

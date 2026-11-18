@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "poimandres-storm",
+  "name": "Poimandres Storm",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/drcmda/poimandres-theme",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Poimandres Storm",
+    "background": "#252B37",
+    "foreground": "#A6ACCD",
+    "cursor": "#FFFFFF",
+    "selection": "#A6ACCD",
+    "ansi": [
+      "#252B37",
+      "#D0679D",
+      "#5DE4C7",
+      "#FFFAC2",
+      "#89DDFF",
+      "#F087BD",
+      "#89DDFF",
+      "#FFFFFF",
+      "#A6ACCD",
+      "#D0679D",
+      "#5DE4C7",
+      "#FFFAC2",
+      "#ADD7FF",
+      "#F087BD",
+      "#ADD7FF",
+      "#FFFFFF"
+    ]
+  }
+}

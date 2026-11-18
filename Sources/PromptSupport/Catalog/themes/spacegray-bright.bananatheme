@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "spacegray-bright",
+  "name": "Spacegray Bright",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/mbadolato/iTerm2-Color-Schemes/pull/452",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Spacegray Bright",
+    "background": "#2A2E3A",
+    "foreground": "#F3F3F3",
+    "cursor": "#C6C6C6",
+    "selection": "#CACACA",
+    "ansi": [
+      "#080808",
+      "#BC5553",
+      "#A0B56C",
+      "#F6C987",
+      "#7BAEC1",
+      "#B98AAE",
+      "#85C9B8",
+      "#D8D8D8",
+      "#626262",
+      "#BC5553",
+      "#A0B56C",
+      "#F6C987",
+      "#7BAEC1",
+      "#B98AAE",
+      "#85C9B8",
+      "#F7F7F7"
+    ]
+  }
+}

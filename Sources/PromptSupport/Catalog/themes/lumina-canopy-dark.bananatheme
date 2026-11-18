@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "lumina-canopy-dark",
+  "name": "Lumina Canopy Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/RazikSF/lumina-themes",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Lumina Canopy Dark",
+    "background": "#0C1B10",
+    "foreground": "#D8E3D6",
+    "cursor": "#D8E3D6",
+    "selection": "#403E24",
+    "ansi": [
+      "#0F2014",
+      "#D57068",
+      "#99D0A4",
+      "#D1CCA8",
+      "#9ACAF1",
+      "#E2ACDD",
+      "#86CFD7",
+      "#B8C3B6",
+      "#7C917E",
+      "#E1928B",
+      "#B2EBBD",
+      "#F4E792",
+      "#C0E3FF",
+      "#FDC5F8",
+      "#9FE9F1",
+      "#D8E3D6"
+    ]
+  }
+}

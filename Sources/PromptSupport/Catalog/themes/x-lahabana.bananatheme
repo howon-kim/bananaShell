@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "x-lahabana",
+  "name": "X Lahabana",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://terminalthemes.com/themes/x-lahabana",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "X Lahabana",
+    "background": "#19191A",
+    "foreground": "#F7F1FF",
+    "cursor": "#F7F1FF",
+    "selection": "#F7F1FF",
+    "ansi": [
+      "#19191A",
+      "#FC618D",
+      "#7BD88F",
+      "#E5FF9D",
+      "#FD9353",
+      "#948AE3",
+      "#5AD4E6",
+      "#F7F1FF",
+      "#4C4C4D",
+      "#FC618D",
+      "#7BD88F",
+      "#E5FF9D",
+      "#FD9353",
+      "#948AE3",
+      "#5AD4E6",
+      "#F7F1FF"
+    ]
+  }
+}

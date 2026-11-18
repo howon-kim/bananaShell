@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "nvim-dark",
+  "name": "Nvim Dark",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "Apache-2.0",
+  "source": "https://github.com/neovim/neovim/pull/26540",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Nvim Dark",
+    "background": "#14161B",
+    "foreground": "#E0E2EA",
+    "cursor": "#9B9EA4",
+    "selection": "#4F5258",
+    "ansi": [
+      "#07080D",
+      "#FFC0B9",
+      "#B3F6C0",
+      "#FCE094",
+      "#A6DBFF",
+      "#FFCAFF",
+      "#8CF8F7",
+      "#EEF1F8",
+      "#4F5258",
+      "#FFC0B9",
+      "#B3F6C0",
+      "#FCE094",
+      "#A6DBFF",
+      "#FFCAFF",
+      "#8CF8F7",
+      "#EEF1F8"
+    ]
+  }
+}

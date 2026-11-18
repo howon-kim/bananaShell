@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "bauhaus-light",
+  "name": "Bauhaus Light",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/dmnsgn/vscode-bauhaus-theme",
+  "tags": [
+    "light"
+  ],
+  "appearance": "light",
+  "scheme": {
+    "name": "Bauhaus Light",
+    "background": "#E5DBD3",
+    "foreground": "#2B2119",
+    "cursor": "#9B0015",
+    "selection": "#C1BDBE",
+    "ansi": [
+      "#2B2119",
+      "#C5031F",
+      "#546903",
+      "#7E5C05",
+      "#4060A3",
+      "#9935A2",
+      "#036D6C",
+      "#AFA59E",
+      "#616161",
+      "#8F0113",
+      "#3B4B01",
+      "#5A4100",
+      "#254283",
+      "#790D83",
+      "#034D4D",
+      "#F5EBE3"
+    ]
+  }
+}

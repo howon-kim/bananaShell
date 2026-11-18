@@ -154,32 +154,42 @@ struct AutomationTerminalChecks {
         let inputEnd = script.range(of: "\nforwardInput\n")!.upperBound
         var v1 = script; v1.removeSubrange(inputStart..<inputEnd)
         precondition(InputTape.updatedTerminalOutput(in: v1) == script, "v1 replay was not upgraded with input forwarding")
-        let scheduler = JobScheduler(home: root, control: { _ in })
+        var controls: [String] = []
+        let scheduler = JobScheduler(home: root, control: { controls.append($0[0]) })
         let job = ScheduledJob(id: UUID(), name: "Disposable test", command: command, directory: root.path,
                                hour: 9, minute: 0, hourly: false, recording: tape, policy: .ask)
         try scheduler.add(job)
         let stored = root.appendingPathComponent("Library/Application Support/bananaShell/Recordings/" + job.label + ".exp")
         try Data(legacy.utf8).write(to: stored)
-        _ = try scheduler.jobs()
+        let agent = root.appendingPathComponent("Library/LaunchAgents/" + job.label + ".plist")
+        func definition(_ url: URL) throws -> [String: Any] {
+            try PropertyListSerialization.propertyList(from: Data(contentsOf: url), format: nil) as! [String: Any]
+        }
+        var oldAgent = try definition(agent)
+        oldAgent["ProgramArguments"] = ["/usr/bin/expect", stored.path]
+        try PropertyListSerialization.data(fromPropertyList: oldAgent, format: .xml, options: 0).write(to: agent)
+        let legacyJobs = try scheduler.jobs()
+        controls.removeAll()
+        try check(legacyJobs.first?.needsOutputUpgrade == true)
+        try check(!scheduler.upgradeOutput(for: legacyJobs) { [job.label: true] })
+        precondition(controls.isEmpty)
+        try check(scheduler.upgradeOutput(for: legacyJobs) { [job.label: false] })
+        precondition(controls == ["bootout", "bootstrap"])
+        try check(scheduler.jobs().first?.needsOutputUpgrade == false)
         try check(String(contentsOf: stored, encoding: .utf8) == script)
         let permissions = try fm.attributesOfItem(atPath: stored.path)[.posixPermissions] as! NSNumber
         precondition(permissions.intValue == 0o600)
+        let replay = stored
         try Data("100 24".utf8).write(to: scheduler.terminalSizeURL(job))
-        try scheduler.remove(job)
-        precondition(!fm.fileExists(atPath: scheduler.terminalSizeURL(job).path))
-        let replay = root.appendingPathComponent("replay.exp")
-        try Data(script.utf8).write(to: replay)
-        try Data("100 24".utf8).write(to: replay.appendingPathExtension("size"))
-        let output = root.appendingPathComponent("replay.log")
-        fm.createFile(atPath: output.path, contents: nil)
-        let log = try FileHandle(forWritingTo: output)
-        defer { try? log.close() }
+        let output = scheduler.logURL(job)
+        try Data("previous run".utf8).write(to: output)
+        let priorID = try scheduler.outputFileID(job)
+        let args = try definition(agent)["ProgramArguments"] as! [String]
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/expect")
-        task.arguments = [replay.path]
+        task.executableURL = URL(fileURLWithPath: args[0])
+        task.arguments = Array(args.dropFirst())
         task.currentDirectoryURL = root
         task.environment = ["HOME": root.path, "ZDOTDIR": root.path, "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"]
-        task.standardOutput = log; task.standardError = log
         try task.run()
         defer { if task.isRunning { task.terminate() } }
         let live = AutomationTerminalSession(outputURL: output, offset: 0, sizeURL: replay.appendingPathExtension("size"))
@@ -203,6 +213,7 @@ struct AutomationTerminalChecks {
         task.waitUntilExit(); live.readOutput(); settle()
         let raw = try Data(contentsOf: output)
         let transcript = String(decoding: raw, as: UTF8.self)
+        try check(scheduler.outputFileID(job) != priorID && !transcript.contains("previous run"))
         precondition(task.terminationStatus == 0, "Replay failed: \(transcript)")
         precondition(sawLive, "The terminal only received output after process exit")
         precondition(raw.range(of: Data("✔︎ 설치 중".utf8)) != nil && !transcript.contains("â"), "Expect re-encoded PTY bytes")
@@ -210,6 +221,36 @@ struct AutomationTerminalChecks {
         let size = live.terminal.terminalDimensions
         precondition(transcript.contains("\(size.rows) \(size.cols)"), "PTY did not follow the viewer size: \(transcript)")
         precondition(text(live.terminal).contains("완료") && !text(live.terminal).contains("진행 10%"))
+        try scheduler.remove(job)
+        precondition(!fm.fileExists(atPath: scheduler.terminalSizeURL(job).path))
+
+        // Short, equal-length and silent runs can all finish between two viewer polls.
+        let plain = ScheduledJob(id: UUID(), name: "Plain command", command: "/bin/cat payload >&2",
+                                 directory: root.path, hour: 10, minute: 15, hourly: true)
+        try scheduler.add(plain)
+        let plainAgent = root.appendingPathComponent("Library/LaunchAgents/" + plain.label + ".plist")
+        let plainArgs = try definition(plainAgent)["ProgramArguments"] as! [String]
+        let plainLog = scheduler.logURL(plain)
+        let viewer = AutomationOutputReader(url: plainLog, offset: 0)
+        let console = AutomationTerminalSession(outputURL: plainLog, offset: 0, sizeURL: nil)
+        for payload in ["First", "Other", "", "OK"] {
+            try Data(payload.utf8).write(to: root.appendingPathComponent("payload"))
+            let run = Process()
+            run.executableURL = URL(fileURLWithPath: plainArgs[0])
+            run.arguments = Array(plainArgs.dropFirst())
+            run.environment = task.environment
+            run.currentDirectoryURL = root
+            try run.run()
+            run.waitUntilExit()
+            precondition(run.terminationStatus == 0)
+            let chunk = try viewer.read()
+            precondition(chunk.bytes == Data(payload.utf8) && (payload == "First" || chunk.reset))
+            try check(Data(contentsOf: plainLog) == Data(payload.utf8))
+            console.readOutput()
+            settle()
+            precondition(text(console.terminal).trimmingCharacters(in: .whitespacesAndNewlines) == payload)
+        }
+        try check(Data(contentsOf: output) == raw)
 
         // Confirmation replay continues to work with the binary terminal stream.
         let confirmCommand = #"printf 'Upgrade [y/n] '; read reply; printf '\r\nanswer=%s\r\n' "$reply""#
@@ -224,7 +265,7 @@ struct AutomationTerminalChecks {
         let confirmLog = try FileHandle(forWritingTo: confirmOutput)
         defer { try? confirmLog.close() }
         let confirm = Process()
-        confirm.executableURL = task.executableURL
+        confirm.executableURL = URL(fileURLWithPath: "/usr/bin/expect")
         confirm.arguments = [confirmScript.path]
         confirm.environment = task.environment
         confirm.currentDirectoryURL = root

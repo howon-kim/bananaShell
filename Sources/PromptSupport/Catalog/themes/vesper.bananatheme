@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "id": "vesper",
+  "name": "Vesper",
+  "author": "",
+  "summary": "Terminal color scheme.",
+  "license": "MIT",
+  "source": "https://github.com/raunofreiberg/vesper",
+  "tags": [
+    "dark"
+  ],
+  "appearance": "dark",
+  "scheme": {
+    "name": "Vesper",
+    "background": "#101010",
+    "foreground": "#FFFFFF",
+    "cursor": "#ACB1AB",
+    "selection": "#988049",
+    "ansi": [
+      "#101010",
+      "#F5A191",
+      "#90B99F",
+      "#E6B99D",
+      "#ACA1CF",
+      "#E29ECA",
+      "#EA83A5",
+      "#A0A0A0",
+      "#7E7E7E",
+      "#FF8080",
+      "#99FFE4",
+      "#FFC799",
+      "#B9AEDA",
+      "#ECAAD6",
+      "#F591B2",
+      "#FFFFFF"
+    ]
+  }
+}
