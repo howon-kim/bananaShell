@@ -341,6 +341,26 @@ struct PersistentTerminal: Sendable {
             .map { $0.trimmingCharacters(in: .newlines) }.flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    /// tmux's view of a session for a diagnostics report: file name → contents.
+    func diagnostics(_ id: UUID) -> [(String, String)] {
+        let target = Self.name(id)
+        func capture(_ command: [String]) -> String {
+            do { return try run(command) } catch { return "error: \(error.localizedDescription)\n" }
+        }
+        let pane = capture(["display-message", "-p", "-t", target, """
+            pane #{pane_width}x#{pane_height} window #{window_width}x#{window_height} \
+            cursor #{cursor_x},#{cursor_y} in_mode #{pane_in_mode} scroll #{scroll_position} \
+            alternate #{alternate_on} history #{history_size} command #{pane_current_command}
+            """])
+        let clients = capture(["list-clients", "-t", target, "-F",
+                               "client #{client_tty} #{client_width}x#{client_height} type=#{client_termtype} features=#{client_termfeatures}"])
+        return [
+            ("tmux-screen.txt", capture(["capture-pane", "-p", "-t", target])),
+            ("tmux.ansi", capture(["capture-pane", "-p", "-e", "-S", "-200", "-t", target])),
+            ("tmux-info.txt", capture(["display-message", "-p", "tmux #{version}"]) + pane + clients),
+        ]
+    }
+
     /// Drops retained output above the screen; the visible screen stays.
     func clearScrollback(_ id: UUID) {
         leaveCopyMode(id)

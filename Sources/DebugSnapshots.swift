@@ -1,6 +1,7 @@
 #if DEBUG
 import AppKit
 import SwiftUI
+import SwiftTerm
 
 /// Debug builds only: `bananaShell --render-marketplace out.png [WIDTHxHEIGHT] [card-id]`
 /// (also `--render-extensions … [extension-id]`)
@@ -10,7 +11,52 @@ import SwiftUI
 enum DebugSnapshots {
     @MainActor static func renderIfRequested() {
         let args = CommandLine.arguments
-        let modes = ["--render-marketplace", "--render-tabbar", "--render-settings", "--render-prompt-options", "--render-automations", "--render-extensions"]
+        // `--attach-dump tmux socket config session COLSxROWS seconds`: attaches a headless
+        // SwiftTerm as a tmux client for the given time, then prints its visible screen.
+        if let flag = args.firstIndex(of: "--attach-dump"), args.count > flag + 6 {
+            let size = args[flag + 5].split(separator: "x").compactMap { Int($0) }
+            let seconds = Double(args[flag + 6]) ?? 10
+            let headless = HeadlessTerminal(queue: DispatchQueue(label: "attach"),
+                                            options: SwiftTerm.TerminalOptions(cols: size[0], rows: size[1]),
+                                            directDelivery: true) { _ in }
+            headless.process.startProcess(executable: args[flag + 1],
+                                          args: ["-u", "-L", args[flag + 2], "-f", args[flag + 3], "attach", "-t", args[flag + 4]],
+                                          environment: ["TERM=xterm-256color", "LANG=en_US.UTF-8", "HOME=" + NSHomeDirectory()])
+            // Optional resize schedule: "100x40@4,88x32@6.5" resizes the client like the app does.
+            var elapsed = 0.0
+            var finalRows = size[1]
+            if args.count > flag + 7 {
+                for step in args[flag + 7].split(separator: ",") {
+                    let parts = step.split(separator: "@")
+                    let dims = parts[0].split(separator: "x").compactMap { Int($0) }
+                    let at = Double(parts[1]) ?? elapsed
+                    Thread.sleep(forTimeInterval: max(0, at - elapsed)); elapsed = at
+                    headless.terminal.terminalLock.withLock { headless.terminal.resize(cols: dims[0], rows: dims[1]) }
+                    var ws = headless.getWindowSize()
+                    _ = headless.process.updateWindowSize(&ws)
+                    finalRows = dims[1]
+                }
+            }
+            Thread.sleep(forTimeInterval: max(0, seconds - elapsed))
+            let terminal = headless.terminal!
+            for row in 0..<finalRows {
+                print(terminal.getLine(row: row)?.translateToString(trimRight: true, skipNullCellsFollowingWide: true) ?? "")
+            }
+            exit(0)
+        }
+        // `--terminal-widths file`: prints how many columns SwiftTerm advances for each line of the file.
+        if let flag = args.firstIndex(of: "--terminal-widths"), args.indices.contains(flag + 1),
+           let data = FileManager.default.contents(atPath: args[flag + 1]) {
+            final class Sink: SwiftTerm.TerminalDelegate { func send(source: SwiftTerm.Terminal, data: ArraySlice<UInt8>) {} }
+            let sink = Sink()
+            let terminal = SwiftTerm.Terminal(delegate: sink, options: SwiftTerm.TerminalOptions(cols: 120, rows: 5))
+            for item in String(decoding: data, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: true) {
+                terminal.feed(text: "\u{1b}[H\u{1b}[2J" + item)
+                print("\(terminal.getCursorLocation().x)\t\(item)")
+            }
+            exit(0)
+        }
+        let modes = ["--render-marketplace", "--render-tabbar", "--render-settings", "--render-prompt-options", "--render-automations", "--render-extensions", "--render-terminal"]
         guard let flag = args.firstIndex(where: modes.contains), args.indices.contains(flag + 1) else { return }
         let mode = args[flag]
         let tabBar = mode == "--render-tabbar"
@@ -38,6 +84,19 @@ enum DebugSnapshots {
         } else if mode == "--render-automations" {
             host = NSHostingView(rootView: ThemedRoot(content: AutomationPanel()
                 .background(Color(nsColor: shellSurface))))
+        } else if mode == "--render-terminal" {
+            // Feeds a captured `tmux capture-pane -e` file (the last argument) into a
+            // terminal configured like a zsh tab, to check how output is drawn.
+            let terminal = ComposingProcessTerminalView(frame: NSRect(origin: .zero, size: size))
+            terminal.font = terminalFont(size: 14)
+            terminal.lineSpacing = 1.15
+            terminal.nativeBackgroundColor = PromptSetup.background(forShell: "/bin/zsh")
+            terminal.nativeForegroundColor = NSColor(white: 0.93, alpha: 1)
+            if let path = selection, let data = FileManager.default.contents(atPath: path) {
+                let text = String(decoding: data, as: UTF8.self).replacingOccurrences(of: "\n", with: "\r\n")
+                terminal.feed(text: text)
+            }
+            host = terminal
         } else if mode == "--render-extensions" {
             host = NSHostingView(rootView: ThemedRoot(content: ExtensionMarketplaceView(initialSelection: selection)))
         } else if mode == "--render-prompt-options" {

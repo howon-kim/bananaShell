@@ -850,7 +850,8 @@ private final class WorkspaceWindowController: NSObject, NSWindowDelegate, NSMen
                 wantsMouse: { server.wantsMouse(persistentID) },
                 directory: { [weak session] in session?.directory },
                 clearScrollback: { server.clearScrollback(persistentID) },
-                inCopyMode: { server.inCopyMode(persistentID) })
+                inCopyMode: { server.inCopyMode(persistentID) },
+                diagnostics: { server.diagnostics(persistentID) })
             if selecting { select(.shell(serial)) }
             terminal.startProcess(executable: server.executable.path, args: server.attachment(session.persistentID),
                                   environment: Terminal.getEnvironmentVariables(), currentDirectory: FileManager.default.homeDirectoryForCurrentUser.path)

@@ -131,6 +131,14 @@ final class ComposingProcessTerminalView: LocalProcessTerminalView {
             actions.clearScrollback()
             self?.clearScrollback()
         }
+        menu.addItem(.separator())
+        add("Save Diagnostics", "stethoscope") { [weak self] in
+            // Let the menu fade out first so the screen image shows only the terminal.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                guard let self else { return }
+                TerminalDiagnostics.save(view: self, tmux: actions.diagnostics)
+            }
+        }
         showingMenu = true
         NSMenu.popUpContextMenu(menu, with: event, for: self)
         return true
@@ -228,6 +236,77 @@ struct TerminalContextActions {
     var clearScrollback: () -> Void
     /// True while tmux shows scrollback or a mouse selection (copy mode).
     var inCopyMode: () -> Bool
+    /// tmux's side of a diagnostics report: file name → contents.
+    var diagnostics: () -> [(String, String)] = { [] }
+}
+
+/// Saves what the terminal shows, what SwiftTerm holds and what tmux holds, so a
+/// display problem can be traced to the renderer, the terminal model or tmux.
+@MainActor enum TerminalDiagnostics {
+    static var folder: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("bananaShell/Diagnostics", isDirectory: true)
+    }
+
+    static func save(view: ComposingProcessTerminalView, tmux: () -> [(String, String)]) {
+        // Capture the pixels and SwiftTerm's model first, back to back, before anything redraws.
+        let image = screenImage(of: view)
+        let viewport = view.terminalContentSnapshot(region: .viewport)
+        let history = view.terminalContentSnapshot(region: .history(maximumScrollbackRows: 200))
+        let stamp = ISO8601DateFormatter.string(from: Date(), timeZone: .current,
+                                                formatOptions: [.withFullDate, .withTime, .withColonSeparatorInTime])
+            .replacingOccurrences(of: ":", with: "-")
+        let directory = folder.appendingPathComponent(stamp, isDirectory: true)
+        var files: [(String, String)] = []
+        if let viewport {
+            files.append(("swiftterm-viewport.txt", viewport.rows.map { $0.text }.joined(separator: "\n") + "\n"))
+        }
+        if let history { files.append(("swiftterm.ansi", history.ansiRepresentation())) }
+        let dimensions = view.terminalDimensions
+        var info = [
+            "date \(Date())",
+            "app \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") ?? "?") (\(Bundle.main.bundlePath))",
+            "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            "view frame \(view.frame) in window \(view.window?.frame ?? .zero) scale \(view.window?.backingScaleFactor ?? 0)",
+            "view hidden \(view.isHiddenOrHasHiddenAncestor) window visible \(view.window?.occlusionState.contains(.visible) ?? false) key \(view.window?.isKeyWindow ?? false)",
+            "terminal \(dimensions.cols)x\(dimensions.rows) font \(view.font.fontName) \(view.font.pointSize)pt metal \(view.isUsingMetalRenderer)",
+        ]
+        if let viewport {
+            info.append("viewport rows \(viewport.capturedRange) liveTop \(viewport.liveTopRow) scrolled \(viewport.capturedRange.lowerBound != viewport.liveTopRow) alternate \(viewport.inputState.isAlternateBuffer) cursor \(viewport.cursorColumn),\(viewport.cursorRow - viewport.liveTopRow)")
+        }
+        files.append(("info.txt", info.joined(separator: "\n") + "\n"))
+        files += tmux()
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            for (name, text) in files {
+                try Data(text.utf8).write(to: directory.appendingPathComponent(name))
+            }
+            if let image, let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) {
+                try png.write(to: directory.appendingPathComponent("screen.png"))
+            }
+            NSWorkspace.shared.activateFileViewerSelecting([directory])
+        } catch {
+            let alert = NSAlert(error: error)
+            alert.messageText = "Couldn’t save diagnostics"
+            alert.runModal()
+        }
+    }
+
+    /// The terminal's pixels as the window server composited them (not a fresh redraw).
+    private static func screenImage(of view: NSView) -> CGImage? {
+        guard let window = view.window, window.windowNumber > 0 else { return nil }
+        typealias Capture = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
+        guard let handle = dlopen("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics", RTLD_NOW),
+              let symbol = dlsym(handle, "CGWindowListCreateImage") else { return nil }
+        // kCGWindowListOptionIncludingWindow, kCGWindowImageBoundsIgnoreFraming.
+        guard let image = unsafeBitCast(symbol, to: Capture.self)(.null, 1 << 3, UInt32(window.windowNumber), 1 << 0)?
+            .takeRetainedValue() else { return nil }
+        let scale = CGFloat(image.width) / max(1, window.frame.width)
+        let inWindow = view.convert(view.bounds, to: nil)
+        let crop = CGRect(x: inWindow.minX * scale, y: (window.frame.height - inWindow.maxY) * scale,
+                          width: inWindow.width * scale, height: inWindow.height * scale).integral
+        return image.cropping(to: crop) ?? image
+    }
 }
 
 private final class TerminalMenuAction: NSObject {

@@ -212,6 +212,10 @@ struct NotchTerminalGroup: Equatable, Identifiable {
             inCopyMode: { [weak self] in
                 guard let self, let id = self.model.current else { return false }
                 return self.server()?.inCopyMode(id) ?? false
+            },
+            diagnostics: { [weak self] in
+                guard let self, let id = self.model.current else { return [] }
+                return self.server()?.diagnostics(id) ?? []
             })
         surface.addSubview(terminal)
         self.terminal = terminal
