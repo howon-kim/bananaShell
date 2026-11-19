@@ -75,7 +75,10 @@ struct PersistentTerminal: Sendable {
             ? "set -g mouse on\nset -s terminal-overrides 'linux*:AX@'"
             // Without the alternate screen, lines tmux scrolls off the top land
             // in the native terminal's scrollback. linux*:AX@ is tmux's default.
-            : "set -g mouse off\nset -s terminal-overrides 'linux*:AX@,*:smcup@:rmcup@'"
+            // indn@: scroll with one newline per line. tmux otherwise scrolls a
+            // burst with CSI n S, and SwiftTerm (like xterm.js) drops lines that
+            // scroll off that way, so streamed output left gaps in scrollback.
+            : "set -g mouse off\nset -s terminal-overrides 'linux*:AX@,*:smcup@:rmcup@:indn@'"
         return mode + "\n" + baseConfiguration
     }
     private static let baseConfiguration = """
