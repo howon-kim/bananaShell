@@ -279,6 +279,63 @@ struct AutomationTerminalChecks {
         let confirmed = try String(contentsOf: confirmOutput, encoding: .utf8)
         precondition(confirm.terminationStatus == 0 && confirmed.contains("answer=y") && confirmed.contains("selected Yes"), confirmed)
 
+        // Grid markers are split from output, even when a read ends inside one.
+        let marker = Data("\u{1b}]777;bananaShell-size;140 24\u{7}".utf8)
+        var splitter = TerminalGridMarkerSplitter()
+        let sample = Data("ab".utf8) + marker + Data("\u{1b}[Kcd".utf8)
+        var pieces: [TerminalGridMarkerSplitter.Piece] = []
+        for byte in sample { pieces += splitter.split(Data([byte])) }
+        let joined = pieces.reduce(into: [TerminalGridMarkerSplitter.Piece]()) { result, piece in
+            if case .output(let next) = piece, case .output(let previous)? = result.last { result[result.count - 1] = .output(previous + next) }
+            else { result.append(piece) }
+        }
+        precondition(joined == [.output(Array("ab".utf8)), .grid(TerminalGrid(cols: 140, rows: 24)), .output(Array("\u{1b}[Kcd".utf8))], "\(joined)")
+        precondition(splitter.split(Data("\u{1b}]777;notify;x\u{7}\u{1b}]777;bananaShell-size;1234567\u{7}".utf8)).count == 1, "Other OSC 777 must pass through")
+        _ = splitter.split(Data("\u{1b}]777;banana".utf8))
+        precondition(splitter.drain() == Array("\u{1b}]777;banana".utf8), "An unfinished marker must not be lost")
+        let markedLog = root.appendingPathComponent("marked.log")
+        try (Data(repeating: 120, count: 2 * 1024 * 1024) + marker + Data(repeating: 121, count: 1024 * 1024 + 10)).write(to: markedLog)
+        precondition(try AutomationOutputReader(url: markedLog, offset: 0).read().grid == TerminalGrid(cols: 140, rows: 24),
+                     "Omitted history must keep the grid it ended with")
+
+        // Live terminal v1 replays without grid markers gain them in place.
+        var unmarked = script.replacingOccurrences(of: "\n            announceTerminalSize $cols $rows", with: "")
+        unmarked = unmarked.replacingOccurrences(of: "proc announceTerminalSize {cols rows} {\n    catch {puts -nonewline stdout \"\\033\\]777;bananaShell-size;$cols $rows\\007\"}\n}\n", with: "")
+        unmarked = unmarked.replacingOccurrences(of: "announceTerminalSize [lindex $stty_init 3] [lindex $stty_init 1]\n", with: "")
+        precondition(!unmarked.contains("announceTerminalSize"))
+        precondition(InputTape.updatedTerminalOutput(in: unmarked) == script, "v1 replay did not gain grid markers")
+        precondition(transcript.contains("\u{1b}]777;bananaShell-size;100 24\u{7}"), "The initial PTY grid was not logged")
+        precondition(transcript.contains("\u{1b}]777;bananaShell-size;\(size.cols) \(size.rows)\u{7}"), "The resized PTY grid was not logged")
+
+        // A console narrower than the PTY replays at the PTY's width, so a
+        // full-width redraw that returns to column 0 stays on one row.
+        let progressLog = root.appendingPathComponent("progress.log")
+        var progress = marker
+        for spinner in ["⠋", "⠙", "⠹", "⠸"] {
+            let line = spinner + " Bottle llvm (23.1.6) #"
+            let pad = String(repeating: " ", count: 139 - line.count - "Downloading".count)
+            progress += Data((line + pad + "Downloading\u{1b}[K\u{1b}[0G").utf8)
+        }
+        try progress.write(to: progressLog)
+        let narrow = AutomationTerminalSession(outputURL: progressLog, offset: 0, sizeURL: nil, hosted: true)
+        let narrowWindow = NSWindow(contentRect: NSRect(x: -3000, y: 0, width: 700, height: 280),
+                                    styleMask: [.titled], backing: .buffered, defer: false)
+        narrowWindow.contentView = narrow.host
+        narrow.start(active: false)
+        settle(0.2)
+        let fit = narrow.host.fit!
+        precondition(narrow.host.ready && fit.cols < 139, "The check needs a console narrower than the PTY")
+        let replayed = narrow.terminal.terminalDimensions
+        precondition(replayed.cols == 140 && replayed.rows == fit.rows, "Replay did not follow the PTY width: \(replayed)")
+        let rows = text(narrow.terminal).components(separatedBy: "\n").filter { $0.contains("Bottle") }
+        precondition(rows.count == 1 && rows[0].contains("⠸") && rows[0].contains("Downloading"), "Progress redraws stacked: \(rows)")
+        // A new run starts unpinned; its own marker sets the width again.
+        try Data("\u{1b}]777;bananaShell-size;\(fit.cols) \(fit.rows)\u{7}hello".utf8).write(to: progressLog, options: .atomic)
+        narrow.readOutput(); settle()
+        precondition(narrow.terminal.terminalDimensions.cols == fit.cols && text(narrow.terminal).contains("hello"))
+        narrow.stop()
+        narrowWindow.contentView = nil
+
         // Opening a finished task still mounts a selectable native terminal.
         let host = NSHostingView(rootView: AutomationConsole(outputURL: output, offset: 0, sizeURL: nil, active: false))
         let window = NSWindow(contentRect: NSRect(x: -3000, y: 0, width: 860, height: 360),

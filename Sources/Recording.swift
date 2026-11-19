@@ -213,7 +213,8 @@ struct InputTape {
     set stty_init {rows 24 columns 100}
     log_user 0
     """#
-    private static let terminalRuntime = #"""
+    // Live terminal v1 before grid markers; replaced in place by `terminalSizeRuntime`.
+    private static let legacyTerminalSizeRuntime = #"""
     proc updateTerminalSize {} {
         global terminalSize spawn_out
         set path "[info script].size"
@@ -233,7 +234,37 @@ struct InputTape {
     }
     set terminalSize {}
     watchTerminalSize
-    """# + "\n" + inputRuntime
+    """#
+    // Every grid the PTY takes is written to the log in band (see
+    // `TerminalGridMarker`), so a viewer replays output at the width it was
+    // produced for rather than at its own width.
+    private static let terminalSizeRuntime = #"""
+    proc updateTerminalSize {} {
+        global terminalSize spawn_out
+        set path "[info script].size"
+        if {[catch {
+            set f [open $path r]
+            set value [read $f 32]; close $f
+            if {[regexp {^([0-9]{1,3}) ([0-9]{1,3})$} $value -> cols rows] &&
+                $cols >= 20 && $cols <= 500 && $rows >= 5 && $rows <= 200 && $value ne $terminalSize} {
+                stty rows $rows columns $cols < $spawn_out(slave,name)
+                set terminalSize $value
+                announceTerminalSize $cols $rows
+            }
+        }]} {return}
+    }
+    proc announceTerminalSize {cols rows} {
+        catch {puts -nonewline stdout "\033\]777;bananaShell-size;$cols $rows\007"}
+    }
+    proc watchTerminalSize {} {
+        updateTerminalSize
+        after 200 watchTerminalSize
+    }
+    set terminalSize {}
+    announceTerminalSize [lindex $stty_init 3] [lindex $stty_init 1]
+    watchTerminalSize
+    """#
+    private static let terminalRuntime = terminalSizeRuntime + "\n" + inputRuntime
 
     // Keys typed into the live terminal (e.g. a password) arrive as owner-only
     // files next to the replay. They go straight to the PTY: never recorded,
@@ -266,11 +297,13 @@ struct InputTape {
     // binary spawn data as UTF-8. Its log channel honors stdout's binary
     // encoding, preserving the original PTY bytes (including split UTF-8).
     static func updatedTerminalOutput(in script: String) -> String? {
-        let watch = "set terminalSize {}\nwatchTerminalSize\n"
-        if script.hasPrefix(terminalPreamble), script.contains(watch) {
-            // Live terminal v1 replays gain keyboard input forwarding.
-            guard !script.contains(inputRuntimeMarker) else { return nil }
-            return script.replacingOccurrences(of: watch, with: watch + inputRuntime + "\n")
+        if script.hasPrefix(terminalPreamble), script.contains("\nwatchTerminalSize\n") {
+            // Live terminal v1 replays gain grid markers and keyboard input forwarding.
+            var result = script.replacingOccurrences(of: legacyTerminalSizeRuntime + "\n", with: terminalSizeRuntime + "\n")
+            if !result.contains(inputRuntimeMarker) {
+                result = result.replacingOccurrences(of: terminalSizeRuntime + "\n", with: terminalSizeRuntime + "\n" + inputRuntime + "\n")
+            }
+            return result == script ? nil : result
         }
         let channel = "fconfigure $spawn_id -encoding binary -translation binary\n"
         let firstReady = "need $ready command-1 0\n"

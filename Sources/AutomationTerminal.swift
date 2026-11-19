@@ -3,6 +3,86 @@ import SwiftUI
 import SwiftTerm
 import Carbon
 
+struct TerminalGrid: Equatable {
+    var cols: Int
+    var rows: Int
+}
+
+/// The replay writes `ESC ] 777 ; bananaShell-size ; <cols> <rows> BEL` to the
+/// log whenever its PTY takes a grid. Output after a marker was laid out for
+/// that grid: redraws that pad a line to the full width and return to column 0
+/// (Homebrew's progress bars) stack into new rows when replayed narrower.
+enum TerminalGridMarker {
+    static let prefix = Array("\u{1b}]777;bananaShell-size;".utf8)
+    private static let maxPayload = 7 // "500 200"
+
+    enum Match: Equatable {
+        case none
+        /// The bytes up to the end of the buffer could still become a marker.
+        case partial
+        case grid(TerminalGrid, end: Int)
+    }
+
+    static func match(_ bytes: [UInt8], at i: Int) -> Match {
+        for k in prefix.indices {
+            guard i + k < bytes.count else { return .partial }
+            guard bytes[i + k] == prefix[k] else { return .none }
+        }
+        let start = i + prefix.count
+        var j = start
+        while j < bytes.count, bytes[j] != 7 {
+            guard j - start < maxPayload else { return .none }
+            j += 1
+        }
+        guard j < bytes.count else { return .partial }
+        let parts = String(decoding: bytes[start..<j], as: UTF8.self).split(separator: " ", omittingEmptySubsequences: false)
+        guard parts.count == 2, let cols = Int(parts[0]), let rows = Int(parts[1]),
+              (1...999).contains(cols), (1...999).contains(rows) else { return .none }
+        return .grid(TerminalGrid(cols: cols, rows: rows), end: j + 1)
+    }
+
+    /// The last grid announced in `bytes`, if any.
+    static func last(in bytes: [UInt8]) -> TerminalGrid? {
+        var found: TerminalGrid?, i = 0
+        while let k = bytes[i...].firstIndex(of: 0x1b) {
+            if case .grid(let grid, let end) = match(bytes, at: k) { found = grid; i = end } else { i = k + 1 }
+        }
+        return found
+    }
+}
+
+/// Separates grid markers from terminal output. A marker split across reads is
+/// held back until the rest arrives.
+struct TerminalGridMarkerSplitter {
+    enum Piece: Equatable {
+        case output([UInt8])
+        case grid(TerminalGrid)
+    }
+    private var carry: [UInt8] = []
+
+    mutating func split(_ data: Data) -> [Piece] {
+        let bytes = carry + [UInt8](data)
+        carry = []
+        var pieces: [Piece] = [], start = 0, i = 0
+        func flush(_ end: Int) { if end > start { pieces.append(.output(Array(bytes[start..<end]))) } }
+        while let k = bytes[i...].firstIndex(of: 0x1b) {
+            switch TerminalGridMarker.match(bytes, at: k) {
+            case .none: i = k + 1
+            case .partial:
+                flush(k); carry = Array(bytes[k...]); return pieces
+            case .grid(let grid, let end):
+                flush(k); pieces.append(.grid(grid)); start = end; i = end
+            }
+        }
+        flush(bytes.count)
+        return pieces
+    }
+
+    /// Held-back bytes that never became a marker (no more output arrived).
+    mutating func drain() -> [UInt8] { defer { carry = [] }; return carry }
+    mutating func reset() { carry = [] }
+}
+
 /// Read only appended bytes. UTF-8 and escape sequences may span reads; the
 /// terminal parser, rather than a String conversion, retains that state.
 final class AutomationOutputReader {
@@ -10,6 +90,8 @@ final class AutomationOutputReader {
         var bytes = Data()
         var reset = false
         var omitted = false
+        /// The PTY grid in effect where omitted history ends.
+        var grid: TerminalGrid?
     }
     private let url: URL
     private let start: UInt64
@@ -38,6 +120,7 @@ final class AutomationOutputReader {
             if end - position > historyLimit {
                 position = end - historyLimit
                 chunk.omitted = true
+                chunk.grid = try Self.lastGrid(in: handle, before: position)
             }
         } else if current != identity || end < position {
             position = 0
@@ -50,6 +133,86 @@ final class AutomationOutputReader {
         position += UInt64(chunk.bytes.count)
         return chunk
     }
+
+    /// Scans backwards from `end` for the latest grid marker, so a viewer that
+    /// skips old history still starts at the grid the remaining output used.
+    static func lastGrid(in handle: FileHandle, before end: UInt64) throws -> TerminalGrid? {
+        let block: UInt64 = 64 * 1024, overlap = UInt64(TerminalGridMarker.prefix.count + 8)
+        var upper = end, scanned: UInt64 = 0
+        while upper > 0, scanned < 32 * 1024 * 1024 {
+            let lower = upper > block ? upper - block : 0
+            try handle.seek(toOffset: lower)
+            let data = try handle.read(upToCount: Int(min(upper + overlap, end) - lower)) ?? Data()
+            if let grid = TerminalGridMarker.last(in: [UInt8](data)) { return grid }
+            scanned += upper - lower
+            upper = lower
+        }
+        return nil
+    }
+}
+
+/// Shows the playback terminal at the width of the PTY that produced the
+/// output, clipped or padded inside the space SwiftUI gives it, and reports the
+/// grid that space fits so the PTY can follow. Width decides how lines wrap;
+/// rows keep the console's height so the newest output stays in view (the
+/// PTY adopts them while someone watches). Without a marker (plain commands,
+/// older logs) the terminal simply fills the space.
+final class AutomationTerminalHost: NSView {
+    let terminal: TerminalView
+    /// Never shown or fed; measures how many cells fit and what frame a grid needs.
+    private let gauge: TerminalView
+    var onFit: ((TerminalGrid) -> Void)?
+    var onReady: (() -> Void)?
+    private(set) var ready = false
+    private(set) var fit: TerminalGrid?
+    var grid: TerminalGrid? {
+        didSet { if grid != oldValue { layoutTerminal() } }
+    }
+
+    init(terminal: TerminalView) {
+        self.terminal = terminal
+        gauge = TerminalView(frame: terminal.frame)
+        // Zero until SwiftUI lays it out: nothing is replayed at a placeholder width.
+        super.init(frame: .zero)
+        gauge.font = terminal.font
+        gauge.lineSpacing = terminal.lineSpacing
+        gauge.isHidden = true
+        gauge.setAccessibilityElement(false)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        layer?.backgroundColor = terminal.nativeBackgroundColor.cgColor
+        terminal.autoresizingMask = []
+        addSubview(gauge)
+        addSubview(terminal)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var isFlipped: Bool { true }
+    override func setFrameSize(_ newSize: NSSize) { super.setFrameSize(newSize); layoutTerminal() }
+    override func layout() { super.layout(); layoutTerminal() }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); layoutTerminal() }
+    override func viewDidChangeBackingProperties() { super.viewDidChangeBackingProperties(); layoutTerminal() }
+
+    private func layoutTerminal() {
+        guard window != nil, bounds.width > 0, bounds.height > 0 else { return }
+        gauge.setFrameSize(bounds.size)
+        let dims = gauge.terminalDimensions
+        let fits = TerminalGrid(cols: dims.cols, rows: dims.rows)
+        // A grid wider than the space is clipped on the right.
+        let width = grid.map { frameWidth(cols: $0.cols, rows: fits.rows) } ?? bounds.width
+        let frame = NSRect(x: 0, y: 0, width: width, height: bounds.height)
+        if terminal.frame != frame { terminal.frame = frame }
+        if fit != fits { fit = fits; onFit?(fits) }
+        if !ready { ready = true; onReady?() }
+    }
+
+    private func frameWidth(cols: Int, rows: Int) -> CGFloat {
+        gauge.resize(cols: cols, rows: rows)
+        let optimal = gauge.getOptimalFrameSize()
+        gauge.setFrameSize(bounds.size)
+        // Half a point of slack so the cell count never rounds down.
+        return optimal.width + 0.5
+    }
 }
 
 // Terminal reports never reach the replay. While a run is live, keys the user
@@ -57,7 +220,6 @@ final class AutomationOutputReader {
 private final class PlaybackTerminal: TerminalView {
     var forward: (([UInt8]) -> Void)?
     private(set) var typing = false
-
     /// Called from a key monitor before AppKit dispatches the key, so bytes the
     /// key produces count as typed; terminal reports that follow later do not.
     func beginKeystroke() {
@@ -89,12 +251,27 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
     private var copyMonitor: Any?
     private var active = false
     private var lastSize = ""
+    private var markers = TerminalGridMarkerSplitter()
+    /// The view the console mounts. Sessions created with `hosted: false`
+    /// (checks that use `terminal` directly) follow the terminal's own frame.
+    private(set) lazy var host: AutomationTerminalHost = {
+        hosted = true
+        let host = AutomationTerminalHost(terminal: terminal)
+        host.onFit = { [weak self] _ in self?.publishSize() }
+        host.onReady = { [weak self] in
+            guard let self, self.timer != nil else { return }
+            self.publishSize()
+            self.readOutput()
+        }
+        return host
+    }()
+    private var hosted = false
 
     private let inputURL: URL?
     private var inputSequence = 0
 
     /// `inputURL` is the replay script; typed keys are written beside it as `<script>.input.<n>`.
-    init(outputURL: URL, offset: UInt64, sizeURL: URL?, inputURL: URL? = nil) {
+    init(outputURL: URL, offset: UInt64, sizeURL: URL?, inputURL: URL? = nil, hosted: Bool = false) {
         reader = AutomationOutputReader(url: outputURL, offset: offset)
         self.sizeURL = sizeURL
         self.inputURL = inputURL
@@ -109,6 +286,8 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         terminal.allowMouseReporting = false
         terminal.terminalDelegate = self
         terminal.setAccessibilityLabel("Automation terminal output")
+        // Before any read, so no output is replayed outside the PTY's grid.
+        if hosted { _ = host }
         copyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             MainActor.assumeIsolated {
                 guard let self else { return event }
@@ -136,8 +315,8 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
     func start(active: Bool) {
         stop()
         self.active = active
-        readOutput()
         publishSize()
+        readOutput()
         let timer = Timer(timeInterval: active ? 0.1 : 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.readOutput() }
         }
@@ -145,18 +324,43 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         RunLoop.main.add(timer, forMode: .common)
     }
 
-    func stop() { timer?.invalidate(); timer = nil }
+    /// Withdraws the published size so the next unattended run starts at the
+    /// replay's default grid instead of a width left over from an old window.
+    func stop() {
+        timer?.invalidate(); timer = nil
+        if !lastSize.isEmpty, let sizeURL {
+            try? FileManager.default.removeItem(at: sizeURL)
+            lastSize = ""
+        }
+    }
     deinit {
         timer?.invalidate()
         if let copyMonitor { NSEvent.removeMonitor(copyMonitor) }
     }
 
     func readOutput() {
+        // Nothing is replayed before the console has its real size.
+        if hosted && !host.ready { return }
         do {
             let chunk = try reader.read()
-            if chunk.reset { terminal.feed(text: "\u{1b}c") }
+            if chunk.reset {
+                markers.reset()
+                if hosted { host.grid = nil }
+                terminal.feed(text: "\u{1b}c")
+            }
+            if hosted, let grid = chunk.grid { host.grid = grid }
             if chunk.omitted { terminal.feed(text: "Earlier output omitted.\r\n") }
-            if !chunk.bytes.isEmpty { terminal.feed(byteArray: Array(chunk.bytes)[...]) }
+            if chunk.bytes.isEmpty {
+                let held = markers.drain()
+                if !held.isEmpty { terminal.feed(byteArray: held[...]) }
+            }
+            for piece in markers.split(chunk.bytes) {
+                switch piece {
+                case .output(let bytes): terminal.feed(byteArray: bytes[...])
+                // Resize between the bytes: what follows was laid out for this grid.
+                case .grid(let grid): if hosted { host.grid = grid }
+                }
+            }
             if failure != nil { failure = nil }
         } catch {
             let message = error.localizedDescription
@@ -180,9 +384,18 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         catch { try? fm.removeItem(at: staging); failure = "Could not send input to the automation." }
     }
 
+    /// Asks the PTY for the grid the console fits. Hosted, the terminal itself
+    /// follows the PTY's grid, so the fit comes from the host's measurement.
     private func publishSize() {
         guard active, let sizeURL else { return }
-        let size = terminal.terminalDimensions
+        let size: TerminalGrid
+        if hosted {
+            guard let fit = host.fit else { return }
+            size = fit
+        } else {
+            let dims = terminal.terminalDimensions
+            size = TerminalGrid(cols: dims.cols, rows: dims.rows)
+        }
         let value = "\(min(500, max(20, size.cols))) \(min(200, max(5, size.rows)))"
         guard lastSize != value else { return }
         do {
@@ -191,7 +404,7 @@ final class AutomationTerminalSession: NSObject, ObservableObject, TerminalViewD
         } catch { /* The replay can still use its default grid. */ }
     }
 
-    func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) { publishSize() }
+    func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) { if !hosted { publishSize() } }
     func setTerminalTitle(source: TerminalView, title: String) {}
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
     func scrolled(source: TerminalView, position: Double) {}
@@ -206,13 +419,13 @@ struct AutomationConsole: View {
     let active: Bool
 
     init(outputURL: URL, offset: UInt64, sizeURL: URL?, inputURL: URL? = nil, active: Bool) {
-        _session = StateObject(wrappedValue: AutomationTerminalSession(outputURL: outputURL, offset: offset, sizeURL: sizeURL, inputURL: inputURL))
+        _session = StateObject(wrappedValue: AutomationTerminalSession(outputURL: outputURL, offset: offset, sizeURL: sizeURL, inputURL: inputURL, hosted: true))
         self.active = active
     }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Surface(terminal: session.terminal)
+            Surface(host: session.host)
             if let failure = session.failure {
                 Text(failure).font(.caption).foregroundStyle(.red).padding(10)
             }
@@ -223,8 +436,8 @@ struct AutomationConsole: View {
     }
 
     private struct Surface: NSViewRepresentable {
-        let terminal: TerminalView
-        func makeNSView(context: Context) -> TerminalView { terminal }
-        func updateNSView(_ view: TerminalView, context: Context) {}
+        let host: AutomationTerminalHost
+        func makeNSView(context: Context) -> AutomationTerminalHost { host }
+        func updateNSView(_ view: AutomationTerminalHost, context: Context) {}
     }
 }
